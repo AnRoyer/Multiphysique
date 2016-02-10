@@ -9,7 +9,7 @@ using namespace std;
 
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters)
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, std::vector<double> &cond_periodiques)
 {
     FILE *fp = fopen(fileName, "r");
     if(!fp)//On verifie que le fichier soit bien ouvert
@@ -26,6 +26,14 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters)
         if(strcmp(string, "END") == 0)//On verifie si on est pas à la fin du fichier
         {
             break;
+        }
+        else if(strcmp(string, "PC") == 0)//On verifie si on est pas à la fin du fichier
+        {
+            cout << "Hello" << endl;	
+            fscanf(fp, "%lf", &cond_periodiques[0]);
+            fscanf(fp, "%lf", &cond_periodiques[1]);
+            fscanf(fp, "%lf", &cond_periodiques[2]);
+            cout << "Helloend" << endl;
         }
         else//Si pas "END" alors c'est un parametre
         {

@@ -30,7 +30,8 @@ int main(int argc, char **argv)
 
 
     vector<Parameter*> parameters;
-    readPHY(argv[2], parameters);
+    vector<double> cond_periodiques(3);
+    readPHY(argv[2], parameters, cond_periodiques);
 
     for(unsigned int i = 0; i < parameters.size(); i++)
     {
@@ -44,20 +45,20 @@ int main(int argc, char **argv)
             cout << "\t - A thermal diffusivity of " << parameters[i]->value[0] << " m^2/s with a heat production of " << parameters[i]->value[1] << " K/s;" << endl;
             cout << "\t - A electrical conductivity of " << parameters[i]->value[2] << " S/m with a change in charge density of " << parameters[i]->value[3] << " A/m^3." << endl;
         }
-    }
-
+    }  
     //FEM thermique
-    fem(nodes, elements, physicals, parameters, solutionT, 0);
+    fem(nodes, elements, physicals, parameters, solutionT, 0, 1, cond_periodiques); //(0,1)->(0->Termique 1->conditions periodiques)
     //FEM électrique
-    fem(nodes, elements, physicals, parameters, solutionE, 1);
+    //fem(nodes, elements, physicals, parameters, solutionE, 1, 0, cond_periodiques);
 
     //Ecriture MSH thermique
     writeMSH((char*)"solT.pos", 0, 1, solutionT);
     //Ecriture MSH électrique
-    writeMSH((char*)"solE.pos", 0, 1, solutionE);
+    //writeMSH((char*)"solE.pos", 0, 1, solutionE);
 
     //fichier Matlab
-    FILE *fp = fopen("dataMatlabT.dat", "w");
+
+    /*FILE *fp = fopen("dataMatlabT.dat", "w");
 
     std::map<Node*, std::vector<double> >::iterator itT = solutionT.begin();
 
@@ -78,7 +79,7 @@ int main(int argc, char **argv)
         fprintf(fp, "%.15f \t %.15f \t %.15f \n", itE->first->x, itE->first->y, itE->second[0]);
     }
 
-    fclose(fp);
+    fclose(fp);*/
 
     return 0;
 }
