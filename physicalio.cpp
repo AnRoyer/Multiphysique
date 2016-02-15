@@ -29,18 +29,16 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, std::vec
         }
         else if(strcmp(string, "PC") == 0)//On verifie si on est pas à la fin du fichier
         {
-            cout << "Hello" << endl;	
             fscanf(fp, "%lf", &cond_periodiques[0]);
             fscanf(fp, "%lf", &cond_periodiques[1]);
             fscanf(fp, "%lf", &cond_periodiques[2]);
-            cout << "Helloend" << endl;
         }
         else//Si pas "END" alors c'est un parametre
         {
             Parameter *p = new Parameter;
             p->name = string;//nom du parametre (= nom des physicals créer dans le .geo)
 
-            if(fscanf(fp, "%d", &p->dim) != 1)//Si la lecture échoue
+            if(fscanf(fp, "%d", &p->dim) != 1)//Si la lecture échoué
             {
                 fclose(fp);
                 return ;

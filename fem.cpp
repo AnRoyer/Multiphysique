@@ -53,7 +53,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     map<int, double> linesRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
     map<int, std::vector<double> > surfaceRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 2 (surface)
 
-    /*Chargement des paramètres de la struc Parameter contenant les paramètres d'entrées.
+    /*Chargement des paramètres de la struct Parameter contenant les paramètres d'entrées.
     A chaque éléments de physicals, on lui associe l'élément de "parameters" correspondant. La correspondance est mappé dans linesRegion et surfaceRegion en fonction du type de paramètre
     */
     for(unsigned int i = 0; i < physicals.size(); i++)
@@ -222,14 +222,14 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             Ke(2,0) = ((x1-x2)*(x2-x3) + (y1-y2)*(y2-y3))/J;
             Ke(2,1) = (- (x1-x2)*(x1-x3) - (y1-y2)*(y1-y3))/J;
             Ke(2,2) = ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))/J;
-            
+
 
             /*Utilisation du mapping NodesCorresp.
             Si une valeur doit être ajoutée à la ligne d'un noeud de droite, celle-ci est directement ajoutée à la ligne correspondant au noeud de gauche en vis-a-vis*/
-            int num1 = NodesCorresp[n1]->num-1; 
+            int num1 = NodesCorresp[n1]->num-1;
             int num2 = NodesCorresp[n2]->num-1;
             int num3 = NodesCorresp[n3]->num-1;
-            
+
             Tmp(num1, n1->num-1) += cons/2*Ke(0,0);
             Tmp(num1, n2->num-1) += cons/2*Ke(0,1);
             Tmp(num1, n3->num-1) += cons/2*Ke(0,2);
@@ -241,7 +241,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             Tmp(num3, n3->num-1) += cons/2*Ke(2,2);
         }
     }
-    
+
     //f vector
     vector<double> f(nodes.size());
     f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
@@ -310,7 +310,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         for(int j=0; j<nodes.size(); j++)
         {
             Tmp(numC1,j) = c[j];
-            vol += c[j];    
+            vol += c[j];
         }
 
         f[numC1] = Tavg*vol;//condition
@@ -349,8 +349,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
 
         //conditions sur f correspondants aux noeuds des coins
-        f[numC2] = gradAvg_x * lx; 
-        f[numC3] = gradAvg_x * lx + gradAvg_y * ly; 
+        f[numC2] = gradAvg_x * lx;
+        f[numC3] = gradAvg_x * lx + gradAvg_y * ly;
         f[numC4] = gradAvg_y * ly;
 
 
@@ -373,8 +373,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                 }
 
             }
-            
-            f[numNode] = gradAvg_x * lx; 
+
+            f[numNode] = gradAvg_x * lx;
         }
 
         for(int i=0;i<TopNodes.size();i++)
@@ -395,7 +395,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                 }
 
             }
-            f[numNode] = gradAvg_y * ly; 
+            f[numNode] = gradAvg_y * ly;
         }
     }
 
@@ -430,8 +430,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
-        fluxx += g[i] * x[i];   
-    } 
+        fluxx += g[i] * x[i];
+    }
     fluxx = fluxx/vol;
 
     //gradiant moyen y
@@ -459,13 +459,13 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
-        fluxy += gy[i] * x[i];   
-    }  
+        fluxy += gy[i] * x[i];
+    }
     fluxy = fluxy/vol;
 
     cout << "Average heat flux along x: q_x = " << fluxx << " [m K/s]" << endl;
     cout << "Average heat flux along y: q_y = " << fluxy << " [m K/s]" << endl;
-      
+
 
     //Solution (écriture)
     for(unsigned int i = 0; i < nodes.size(); i++)
