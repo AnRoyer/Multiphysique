@@ -9,7 +9,7 @@ using namespace std;
 
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, std::vector<double> &cond_periodiques)
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions)
 {
     FILE *fp = fopen(fileName, "r");
     if(!fp)//On verifie que le fichier soit bien ouvert
@@ -20,6 +20,8 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, std::vec
 
     char string[256] = "";
 
+    conditions.exist = false;
+
     while(1)//Boucle de lecture
     {
         fscanf(fp, "%s", string);
@@ -27,11 +29,17 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, std::vec
         {
             break;
         }
-        else if(strcmp(string, "PC") == 0)//On verifie si on est pas à la fin du fichier
+        else if(strcmp(string, "PC") == 0)//Si periodic conditions
         {
-            fscanf(fp, "%lf", &cond_periodiques[0]);
-            fscanf(fp, "%lf", &cond_periodiques[1]);
-            fscanf(fp, "%lf", &cond_periodiques[2]);
+            fscanf(fp, "%lf", &conditions.meanTemperature);
+            fscanf(fp, "%lf", &conditions.xGradient);
+            fscanf(fp, "%lf", &conditions.yGradient);
+            conditions.exist = true;
+        }
+        else if(strcmp(string, "\\\\") == 0)//Si commentaire
+        {
+            char str[500];
+            fgets(str, 500, fp);
         }
         else//Si pas "END" alors c'est un parametre
         {

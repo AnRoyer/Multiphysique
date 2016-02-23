@@ -12,42 +12,8 @@ using namespace std;
 Code de calcul FEM
 */
 
-/* fonction permettant de calculer le vecteur f ainsi que la condition periodique sur le noeud 1 (condition sur la temperature moyenne)*/
-void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,std::vector<double> > &surfaceRegion, int constantProperty)
-{
-    double cons;
-    for(unsigned int i = 0; i < elements.size(); i++)
-    {
-        if(elements[i]->type == 2)//If triangle
-        {
-            if(constantProperty != 0)
-            {
-                cons = constantProperty;
-            }
-            else
-            {
-                cons = surfaceRegion[elements[i]->region][1];// Dans le cas du calcul du vecteur f.
-            }
-            Node *n1 = elements[i]->nodes[0];
-            Node *n2 = elements[i]->nodes[1];
-            Node *n3 = elements[i]->nodes[2];
-            double x1 = n1->x;
-            double y1 = n1->y;
-            double x2 = n2->x;
-            double y2 = n2->y;
-            double x3 = n3->x;
-            double y3 = n3->y;
-            double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
-
-            f[n1->num-1] += cons*J/6;
-            f[n2->num-1] += cons*J/6;
-            f[n3->num-1] += cons*J/6;
-        }
-    }
-}
-
 //type = 0 : thermique, type = 1 = électrique
-void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solution, int type, int conditions, std::vector<double> cond_periodiques)
+void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solution, FemFlag type, FemFlag method, Periodique &conditions)
 {
     //Boundaries
     map<int, double> linesRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
@@ -59,7 +25,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     for(unsigned int i = 0; i < physicals.size(); i++)
     {
         //Si paramètre correspondant à une ligne (ex : condition de bord)
-        if(physicals[i]->dim == 1)
+        if(physicals[i]->dim == 1 && method == DIRICHLET)
         {
             for(unsigned int j = 0; j < parameters.size(); j++)
             {
@@ -122,7 +88,6 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
 
     //Tri des noeuds
-
     Node *C1,*C2,*C3,*C4;//pointeurs vers les noeuds des coins
     vector<Node*> LeftNodes,RightNodes,TopNodes,BottomNodes;//vecteurs contenant les noeuds des bords
     map<Node*, Node*> NodesCorresp;//Vecteur de correspondance qui servira à additionner les lignes des noeuds en vis-a-vis
@@ -147,10 +112,9 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
         else if(nodes[i]->y > ymax)
         {
-            ymax = nodes[i]->y;
+        ymax = nodes[i]->y;
         }
     }
-    cout << xmin << ymin << xmax << ymax << endl;
 
     for(unsigned int i = 0; i < nodes.size(); i++)//Classement
     {
@@ -159,20 +123,20 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         double y = nodes[i]->y;
         int num = nodes[i]->num;
         if(x == xmin && y != ymin && y != ymax)
-	{
-	    LeftNodes.push_back(nodes[i]);
+        {
+            LeftNodes.push_back(nodes[i]);
         }
         else if(x == xmax && y != ymin && y != ymax)
-	{
-	    RightNodes.push_back(nodes[i]);
+        {
+            RightNodes.push_back(nodes[i]);
         }
         else if(y == ymax && x != xmin && x != xmax)
-	{
-	    TopNodes.push_back(nodes[i]);
+        {
+            TopNodes.push_back(nodes[i]);
         }
         else if(y == ymin && x != xmin && x != xmax)
-	{
-	    BottomNodes.push_back(nodes[i]);
+        {
+            BottomNodes.push_back(nodes[i]);
         }
         else if(x == xmin && y == ymin)
         {
@@ -192,7 +156,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
     }
 
-    if(conditions == 1)/*Si conditions periodiques alors le mapping "NodesCorresp" associe les noeuds en vis-a-vis. Sinon, le mapping est quand même utilisé mais tous les noeuds sont mappés vers eux-mêmes.*/
+    if(method == PERIODIC)/*Si conditions periodiques alors le mapping "NodesCorresp" associe les noeuds en vis-a-vis. Sinon, le mapping est quand même utilisé mais tous les noeuds sont mappés vers eux-mêmes.*/
     {
         for(unsigned int i = 0; i < LeftNodes.size(); i++)
         {
@@ -247,14 +211,14 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             Ke(2,0) = ((x1-x2)*(x2-x3) + (y1-y2)*(y2-y3))/J;
             Ke(2,1) = (- (x1-x2)*(x1-x3) - (y1-y2)*(y1-y3))/J;
             Ke(2,2) = ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))/J;
-            
+
 
             /*Utilisation du mapping NodesCorresp.
             Si une valeur doit être ajoutée à la ligne d'un noeud de droite, celle-ci est directement ajoutée à la ligne correspondant au noeud de gauche en vis-a-vis*/
-            int num1 = NodesCorresp[n1]->num-1; 
+            int num1 = NodesCorresp[n1]->num-1;
             int num2 = NodesCorresp[n2]->num-1;
             int num3 = NodesCorresp[n3]->num-1;
-            
+
             Tmp(num1, n1->num-1) += cons/2*Ke(0,0);
             Tmp(num1, n2->num-1) += cons/2*Ke(0,1);
             Tmp(num1, n3->num-1) += cons/2*Ke(0,2);
@@ -266,13 +230,13 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             Tmp(num3, n3->num-1) += cons/2*Ke(2,2);
         }
     }
-    
+
     //f vector
     vector<double> f(nodes.size());
     f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
 
     //Dirichlet sur K
-    if(conditions == 0)
+    if(method == DIRICHLET)
     {
         for(unsigned int i = 0; i < elements.size(); i++)
         {
@@ -297,11 +261,9 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                 }
             }
         }
-    }
 
-    //Dirichlet sur f
-    if(conditions == 0)
-    {
+        //Dirichlet sur f
+
         for(unsigned int i = 0; i < elements.size(); i++)
         {
             if(elements[i]->type == 1)//If line
@@ -321,21 +283,23 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     double lx = abs(C2->x - C1->x);
     double ly = abs(C4->y - C1->y);
     double vol= lx * ly;//Volume du domaine
-    if(conditions == 1)
+    if(method == PERIODIC)
     {
-        double Tavg = cond_periodiques[0];
-        double gradAvg_x = cond_periodiques[1];
-        double gradAvg_y = cond_periodiques[2];
+        double Tavg = conditions.meanTemperature;
+        double gradAvg_x = conditions.xGradient;
+        double gradAvg_y = conditions.yGradient;
 
-        //Conditon correspondant au noeud 1: temperature moyenne.
+        //Condition correspondant au noeud 1: temperature moyenne.
         int numC1= C1->num-1;
         vector<double> c(nodes.size());//coefficients
+
         f_function(c,nodes,elements,surfaceRegion,1);
+
         vol = 0.0;
         for(int j=0; j<nodes.size(); j++)
         {
             Tmp(numC1,j) = c[j];
-            vol += c[j];    
+            vol += c[j];
         }
 
         f[numC1] = Tavg*vol;//condition
@@ -374,8 +338,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
 
         //conditions sur f correspondants aux noeuds des coins
-        f[numC2] = gradAvg_x * lx; 
-        f[numC3] = gradAvg_x * lx + gradAvg_y * ly; 
+        f[numC2] = gradAvg_x * lx;
+        f[numC3] = gradAvg_x * lx + gradAvg_y * ly;
         f[numC4] = gradAvg_y * ly;
 
 
@@ -398,13 +362,14 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                 }
 
             }
-            
-            f[numNode] = gradAvg_x * lx; 
+
+            f[numNode] = gradAvg_x * lx;
         }
 
         for(int i=0;i<TopNodes.size();i++)
         {
-                int numNode = TopNodes[i]->num-1;
+            int numNode = TopNodes[i]->num-1;
+
             for(int j=0; j<nodes.size(); j++)
             {
                 Tmp(numNode,j) = 0;
@@ -420,7 +385,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                 }
 
             }
-            f[numNode] = gradAvg_y * ly; 
+            f[numNode] = gradAvg_y * ly;
         }
     }
 
@@ -455,8 +420,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
-        fluxx += g[i] * x[i];   
-    } 
+        fluxx += g[i] * x[i];
+    }
     fluxx = fluxx/vol;
 
     //gradiant moyen y
@@ -484,18 +449,52 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
-        fluxy += gy[i] * x[i];   
-    }  
+        fluxy += gy[i] * x[i];
+    }
     fluxy = fluxy/vol;
 
     cout << "Average heat flux along x: q_x = " << fluxx << " [m K/s]" << endl;
     cout << "Average heat flux along y: q_y = " << fluxy << " [m K/s]" << endl;
-      
+
 
     //Solution (écriture)
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
         std::vector<double> val(1, x[i]);
         solution[nodes[i]] = val;
+    }
+}
+
+/* fonction permettant de calculer le vecteur f ainsi que la condition periodique sur le noeud 1 (condition sur la temperature moyenne)*/
+void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,std::vector<double> > &surfaceRegion, int constantProperty)
+{
+    double cons;
+    for(unsigned int i = 0; i < elements.size(); i++)
+    {
+        if(elements[i]->type == 2)//If triangle
+        {
+            if(constantProperty != 0)
+            {
+                cons = constantProperty;
+            }
+            else
+            {
+                cons = surfaceRegion[elements[i]->region][1];// Dans le cas du calcul du vecteur f.
+            }
+            Node *n1 = elements[i]->nodes[0];
+            Node *n2 = elements[i]->nodes[1];
+            Node *n3 = elements[i]->nodes[2];
+            double x1 = n1->x;
+            double y1 = n1->y;
+            double x2 = n2->x;
+            double y2 = n2->y;
+            double x3 = n3->x;
+            double y3 = n3->y;
+            double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
+
+            f[n1->num-1] += cons*J/6;
+            f[n2->num-1] += cons*J/6;
+            f[n3->num-1] += cons*J/6;
+        }
     }
 }

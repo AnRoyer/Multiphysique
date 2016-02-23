@@ -9,6 +9,14 @@ struct Parameter
     std::vector<double> value;//Ex : Temperature boundary or thermal diffusivity; -1 for null
 };
 
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, std::vector<double> &cond_periodiques);
+struct Periodique
+{
+    double meanTemperature;
+    double xGradient;
+    double yGradient;
+    bool exist;
+};
+
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions);
 
 #endif // PHYSICALIO_H_INCLUDED

@@ -30,12 +30,12 @@ int main(int argc, char **argv)
 
 
     vector<Parameter*> parameters;
-    vector<double> cond_periodiques(3);
-    readPHY(argv[2], parameters, cond_periodiques);
+    Periodique conditions;
+    readPHY(argv[2], parameters, conditions);
 
     for(unsigned int i = 0; i < parameters.size(); i++)
     {
-        if(parameters[i]->dim == 1)
+        if(parameters[i]->dim == 1 && conditions.exist == false)
         {
             cout << "Parameter " << parameters[i]->name << " has temperature of " << parameters[i]->value[0] << " K and a electrical potential of " << parameters[i]->value[1] << " V." << endl;
         }
@@ -45,18 +45,28 @@ int main(int argc, char **argv)
             cout << "\t - A thermal diffusivity of " << parameters[i]->value[0] << " m^2/s with a heat production of " << parameters[i]->value[1] << " K/s;" << endl;
             cout << "\t - A electrical conductivity of " << parameters[i]->value[2] << " S/m with a change in charge density of " << parameters[i]->value[3] << " A/m^3." << endl;
         }
-    }  
-    //FEM thermique
-    fem(nodes, elements, physicals, parameters, solutionT, 0, 1, cond_periodiques); //(0,1)->(0->Termique 1->conditions periodiques)
-    //FEM électrique
-    //fem(nodes, elements, physicals, parameters, solutionE, 1, 0, cond_periodiques);
+    }
 
-    //Ecriture MSH thermique
+    if(conditions.exist == true)
+    {
+        cout << "There is periodic conditions with:" << endl;
+        cout << "\t - A mean temperature: " << conditions.meanTemperature << endl;
+        cout << "\t - A mean x gradient: " << conditions.xGradient << endl;
+        cout << "\t - A mean y gradient: " << conditions.yGradient << endl;
+    }
+
+    cout << endl << endl;
+
+    if(conditions.exist == true)
+    {
+        fem(nodes, elements, physicals, parameters, solutionT, THERMAL, PERIODIC, conditions);
+    }
+    else
+    {
+        fem(nodes, elements, physicals, parameters, solutionT, THERMAL, DIRICHLET, conditions);
+    }
+
     writeMSH((char*)"solT.pos", 0, 1, solutionT);
-    //Ecriture MSH électrique
-    //writeMSH((char*)"solE.pos", 0, 1, solutionE);
-
-    //fichier Matlab
 
     /*FILE *fp = fopen("dataMatlabT.dat", "w");
 
