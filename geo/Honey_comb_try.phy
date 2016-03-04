@@ -1,0 +1,8 @@
+Top	1	-1	1
+Bottom	1	-1	12
+Left	1	200	-1
+Right	1	300	-1
+Resist	2	4.0e-8	0	9.0e6	0
+Conduct	2	6.0e-4	0	9.0e6	0
+PC      300	0	200
+END
