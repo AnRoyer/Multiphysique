@@ -43,19 +43,20 @@ int main(int argc, char **argv)
         else if(parameters[i]->dim == 2)
         {
             cout << "Parameter " << parameters[i]->name << " has:" << endl;
-            cout << "\t - A thermal conductivity of :";
+            cout << "\t - A thermal conductivity of :" << endl;
             for(unsigned int j = 0; j < parameters[i]->thermalConductivity.size(); j++)
             {
                 cout << "\t\t" << parameters[i]->thermalConductivity[j]->name << " = " << endl;
-                cout << "\t\t" << parameters[i]->thermalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[0][1] << endl;
-                cout << "\t\t" << parameters[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[1][1] << endl << endl;
+                cout << "\t\t|" << parameters[i]->thermalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[0][1] << "|" << endl;
+                cout << "\t\t|" << parameters[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
             }
             cout << "\t - A heat production of " << parameters[i]->thermalGeneration << " K/s;" << endl;
+            cout << "\t - A electrical conductivity of :" << endl;
             for(unsigned int j = 0; j < parameters[i]->electricalConductivity.size(); j++)
             {
                 cout << "\t\t" << parameters[i]->electricalConductivity[j]->name << " = " << endl;
-                cout << "\t\t" << parameters[i]->electricalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->electricalConductivity[j]->conductivity[0][1] << endl;
-                cout << "\t\t" << parameters[i]->electricalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->electricalConductivity[j]->conductivity[1][1] << endl << endl;
+                cout << "\t\t|" << parameters[i]->electricalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->electricalConductivity[j]->conductivity[0][1] << "|" << endl;
+                cout << "\t\t|" << parameters[i]->electricalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->electricalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
             }
             cout << "\t - A change in charge density of " << parameters[i]->electricalGeneration << " A/m^3." << endl;
         }

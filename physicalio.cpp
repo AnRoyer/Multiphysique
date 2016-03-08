@@ -216,7 +216,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                     {
                         nameParam = param1;
                     }
-                    else if(param2.name == "type")
+                    else if(param2.name == "name")
                     {
                         nameParam = param2;
                     }
@@ -233,7 +233,9 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                                 }
 
                                 Conductivity* newCond = new Conductivity;
-                                newCond->name = nameParam.name;
+                                newCond->name = nameParam.value;
+
+                                cout << nameParam.value << endl;
 
                                 newCond->conductivity[0][0] = readValue(fp);
                                 newCond->conductivity[0][1] = readValue(fp);
@@ -250,7 +252,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                                 }
 
                                 Conductivity* newCond = new Conductivity;
-                                newCond->name = nameParam.name;
+                                newCond->name = nameParam.value;
 
                                 newCond->conductivity[0][0] = readValue(fp);
                                 newCond->conductivity[0][1] = readValue(fp);
