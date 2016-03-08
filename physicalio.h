@@ -2,6 +2,12 @@
 #define PHYSICALIO_H_INCLUDED
 
 //Structure contenant les infos des paramètres du fichier .phy
+struct Conductivity
+{
+        std::string name;
+        double conductivity[2][2];
+};
+
 struct Parameter
 {
     std::string name;
@@ -10,8 +16,8 @@ struct Parameter
     double temperature;
     double voltage;
     //surface parameters
-    std::vector<double> thermalConductivity;
-    std::vector<double> electricalConductivity;
+    std::vector<Conductivity*> thermalConductivity;
+    std::vector<Conductivity*> electricalConductivity;
     double thermalGeneration;
     double electricalGeneration;
 };
@@ -33,20 +39,23 @@ struct XMLparam
 enum Type
 {
     DIRICHLET,
-    PERIODIC
+    PERIODIC,
+    DEFAULTTYPE
 };
 
 enum Nature
 {
     THERMAL,
-    ELECTRICAL
+    ELECTRICAL,
+    DEFAULTNATURE
 };
 
 enum Dim
 {
     LINE,
     SURFACE,
-    GLOBAL
+    GLOBAL,
+    DEFAULTDIM
 };
 
 void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions);

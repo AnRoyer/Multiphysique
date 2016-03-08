@@ -24,9 +24,9 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
     char c;
     Stack pile;
     Parameter* p;
-    Type type;
-    Nature currentNature;
-    Dim currentDim;
+    Type type = DEFAULTTYPE;
+    Nature currentNature = DEFAULTNATURE;
+    Dim currentDim = DEFAULTDIM;
 
     while(true)
     {
@@ -80,6 +80,11 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                     if(c == ' ')
                     {
                         XMLparam param = readParam(fp);
+                        if(param.name == "NULL")
+                        {
+                            cout << "Error: no type specified" << endl;
+                        }
+
                         if(param.name == "type")
                         {
                             if(param.value == "dirichlet")
@@ -115,6 +120,11 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                     if(c == ' ')
                     {
                         XMLparam param = readParam(fp);
+                        if(param.name == "NULL")
+                        {
+                            cout << "Error: no name specified" << endl;
+                        }
+
                         if(param.name == "name")
                         {
                             p = new Parameter;
@@ -137,6 +147,11 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                     if(c == ' ')
                     {
                         XMLparam param = readParam(fp);
+                        if(param.name == "NULL")
+                        {
+                            cout << "Error: no name specified" << endl;
+                        }
+
                         if(param.name == "name")
                         {
                             p = new Parameter;
@@ -182,20 +197,67 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                 }
                 else if(word == "value" && currentDim == SURFACE)
                 {
-                    XMLparam param = readParam(fp);
+                    XMLparam param1 = readParam(fp);
+                    XMLparam param2 = readParam(fp);
+
+                    XMLparam param;
+                    XMLparam nameParam;
+
+                    if(param1.name == "type")
+                    {
+                        param = param1;
+                    }
+                    else if(param2.name == "type")
+                    {
+                        param = param2;
+                    }
+
+                    if(param1.name == "name")
+                    {
+                        nameParam = param1;
+                    }
+                    else if(param2.name == "type")
+                    {
+                        nameParam = param2;
+                    }
+
                     if(param.name == "type")
                     {
                         if(param.value == "conductivity")
                         {
                             if(currentNature == THERMAL)
                             {
-                                p->thermalConductivity.push_back(readValue(fp));
-                                p->thermalConductivity.push_back(readValue(fp));
+                                if(nameParam.name == "NULL")
+                                {
+                                    cout << "Error: no name specified" << endl;
+                                }
+
+                                Conductivity* newCond = new Conductivity;
+                                newCond->name = nameParam.name;
+
+                                newCond->conductivity[0][0] = readValue(fp);
+                                newCond->conductivity[0][1] = readValue(fp);
+                                newCond->conductivity[1][0] = readValue(fp);
+                                newCond->conductivity[1][1] = readValue(fp);
+
+                                p->thermalConductivity.push_back(newCond);
                             }
                             else if(currentNature == ELECTRICAL)
                             {
-                                p->electricalConductivity.push_back(readValue(fp));
-                                p->electricalConductivity.push_back(readValue(fp));
+                                if(nameParam.name == "NULL")
+                                {
+                                    cout << "Error: no name specified" << endl;
+                                }
+
+                                Conductivity* newCond = new Conductivity;
+                                newCond->name = nameParam.name;
+
+                                newCond->conductivity[0][0] = readValue(fp);
+                                newCond->conductivity[0][1] = readValue(fp);
+                                newCond->conductivity[1][0] = readValue(fp);
+                                newCond->conductivity[1][1] = readValue(fp);
+
+                                p->electricalConductivity.push_back(newCond);
                             }
                             else
                             {
@@ -291,9 +353,14 @@ XMLparam readParam(ifstream& fp)
     while(c != '=')
     {
         fp.get(c);
-        if(c != ' ' && c != '=')
+        if(c != ' ' && c != '=' && c != '>')
         {
             word += c;
+        }
+        else if(c == '>')
+        {
+            exit.name = "NULL";
+            return exit;
         }
     }
 
@@ -331,7 +398,7 @@ double readValue(ifstream& fp)
 {
     string word;
     char c;
-    double value;
+    double value = 0;
 
     while(true)
     {
@@ -355,6 +422,10 @@ double readValue(ifstream& fp)
             }
 
             break;
+        }
+        else if(c == '<')
+        {
+            cout << "Error: missing a parameter" << endl;
         }
     }
 

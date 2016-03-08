@@ -8,6 +8,8 @@
 
 using namespace std;
 
+using namespace std;
+
 /*
 Code de calcul FEM
 */
@@ -40,7 +42,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                     {
                         if(parameters[j]->temperature != -1)
                         {
-                            linesRegion[physicals[i]->num] = parameters[j]->voltage;
+                            linesRegion[physicals[i]->num] = parameters[j]->temperature;
                         }
                     }
                     else if(type == ELECTRICFLAG)
@@ -66,19 +68,37 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
                     if(type == THERMALFLAG)
                     {
-                        std::vector<double> v(2);
+                        std::vector<double> v(9);
 
-                        v[0] = parameters[j]->thermalConductivity[0];
-                        v[1] = parameters[j]->thermalGeneration;
+                        v[0] = parameters[j]->thermalGeneration;
+
+                        v[1] = parameters[j]->thermalConductivity[0]->conductivity[0][0];
+                        v[2] = parameters[j]->thermalConductivity[0]->conductivity[0][1];
+                        v[3] = parameters[j]->thermalConductivity[0]->conductivity[1][0];
+                        v[4] = parameters[j]->thermalConductivity[0]->conductivity[1][1];
+
+                        v[5] = parameters[j]->thermalConductivity[1]->conductivity[0][0];
+                        v[6] = parameters[j]->thermalConductivity[1]->conductivity[0][1];
+                        v[7] = parameters[j]->thermalConductivity[1]->conductivity[1][0];
+                        v[8] = parameters[j]->thermalConductivity[1]->conductivity[1][1];
 
                         surfaceRegion[physicals[i]->num] = v;
                     }
                     else if(type == ELECTRICFLAG)
                     {
-                        std::vector<double> v(2);
+                        std::vector<double> v(9);
 
-                        v[0] = parameters[j]->electricalConductivity[0];
-                        v[1] = parameters[j]->electricalGeneration;
+                        v[0] = parameters[j]->electricalGeneration;
+
+                        v[1] = parameters[j]->electricalConductivity[0]->conductivity[0][0];
+                        v[2] = parameters[j]->electricalConductivity[0]->conductivity[0][1];
+                        v[3] = parameters[j]->electricalConductivity[0]->conductivity[1][0];
+                        v[4] = parameters[j]->electricalConductivity[0]->conductivity[1][1];
+
+                        v[5] = parameters[j]->electricalConductivity[1]->conductivity[0][0];
+                        v[6] = parameters[j]->electricalConductivity[1]->conductivity[0][1];
+                        v[7] = parameters[j]->electricalConductivity[1]->conductivity[1][0];
+                        v[8] = parameters[j]->electricalConductivity[1]->conductivity[1][1];
 
                         surfaceRegion[physicals[i]->num] = v;
                     }
@@ -88,7 +108,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
 
     //Tri des noeuds
-    Node *C1,*C2,*C3,*C4;//pointeurs vers les noeuds des coins
+    Node *C1 = NULL,*C2 = NULL,*C3 = NULL,*C4 = NULL;//pointeurs vers les noeuds des coins
     vector<Node*> LeftNodes,RightNodes,TopNodes,BottomNodes;//vecteurs contenant les noeuds des bords
     map<Node*, Node*> NodesCorresp;//Vecteur de correspondance qui servira à additionner les lignes des noeuds en vis-a-vis
 
@@ -121,7 +141,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         NodesCorresp[nodes[i]] = nodes[i];//Initialisation du mapping en faisant pointer tous les noeuds vers eux-mêmes
         double x = nodes[i]->x;
         double y = nodes[i]->y;
-        int num = nodes[i]->num;
+
         if(x == xmin && y != ymin && y != ymax)
         {
             LeftNodes.push_back(nodes[i]);
@@ -197,20 +217,44 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             double y2 = n2->y;
             double x3 = n3->x;
             double y3 = n3->y;
-            double cons = surfaceRegion[elements[i]->region][0];// alpha
+            double theta1 = 1; // Temperature au noeud 1
+            double theta2 = 1; // Temperature au noeud 2
+            double theta3 = 1; // Temperature au noeud 3
+            double thetak = 0;
+            // double cons = surfaceRegion[elements[i]->region][0];// alpha
 
-            gmm::dense_matrix<double> Ke(3,3);
+            gmm::dense_matrix<double> Ke(3,3); // Second terme avec la conductivité sous forme matricielle
+            gmm::dense_matrix<double> KTe(3,1); // Le nouveau terme ne dépend pas de J, on le prend comme un vecteur qu'on calculera à part
+            gmm::dense_matrix<double> alpha(2,2); // matrice alpha
+
+            alpha(0,0) = surfaceRegion[elements[i]->region][1];
+            alpha(0,1) = surfaceRegion[elements[i]->region][2];
+            alpha(1,0) = surfaceRegion[elements[i]->region][3];
+            alpha(1,1) = surfaceRegion[elements[i]->region][4];
+
+            gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
+
+            beta(0,0) = surfaceRegion[elements[i]->region][5];
+            beta(0,1) = surfaceRegion[elements[i]->region][6];
+            beta(1,0) = surfaceRegion[elements[i]->region][7];
+            beta(1,1) = surfaceRegion[elements[i]->region][8];
+
             double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
 
-            Ke(0,0) = ((y2-y3)*(y2-y3)+(x3-x2)*(x3-x2))/J;
-            Ke(0,1) = (- (x2-x3)*(x1-x3) - (y2-y3)*(y1-y3))/J;
-            Ke(0,2) = ((x2-x3)*(x1-x2) + (y2-y3)*(y1-y2))/J;
-            Ke(1,0) = ((x1-x3)*(x3-x2) + (y1-y3)*(y3-y2))/J;
-            Ke(1,1) = ((x1-x3)*(x1-x3) + (y1-y3)*(y1-y3))/J;
-            Ke(1,2) = (- (x1-x3)*(x1-x2) - (y1-y3)*(y1-y2))/J;
-            Ke(2,0) = ((x1-x2)*(x2-x3) + (y1-y2)*(y2-y3))/J;
-            Ke(2,1) = (- (x1-x2)*(x1-x3) - (y1-y2)*(y1-y3))/J;
-            Ke(2,2) = ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))/J;
+            KTe(0,0) = ((theta2 - theta1)*(alpha(0,0)*(y3-y2)*(y3-y1) + alpha(1,1)*(x2-x3)*(x1-x3) + alpha(0,1)*((x2-x3)*(y3-y1) + (y3-y2)*(x1-x3))) + (theta3-theta1)*(alpha(0,0)*(y3-y2)*(y1-y2) + alpha(1,1)*(x2-x3)*(x2-x1) + alpha(1,0)*((x2-x3)*(y1-y2) + (x2-x1)*(y3-y2))))/6;
+            KTe(1,0) = (- (theta2 - theta1)*(alpha(0,0)*(y3-y1)*(y3-y1) + alpha(1,1)*(x1-x3)*(x1-x3) + 2*alpha(0,1)*(x1-x3)*(y3-y1)) - (theta3-theta1)*(alpha(0,0)*(y3-y1)*(y1-y2) + alpha(1,1)*(x1-x3)*(x2-x1) + alpha(1,0)*((x1-x3)*(y1-y2) + (x2-x1)*(y3-y1))))/6;
+            KTe(2,0) = (- (theta2 - theta1)*(alpha(0,0)*(y3-y1)*(y1-y2) + alpha(1,1)*(x2-x1)*(x1-x3) + alpha(0,1)*((x1-x3)*(y1-y2) + (y3-y1)*(x2-x1))) - (theta3-theta1)*(alpha(0,0)*(y1-y2)*(y1-y2) + alpha(1,1)*(x2-x1)*(x2-x1) + 2*alpha(1,0)*(x2-x1)*(y1-y2)))/6;
+
+
+            Ke(0,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y3-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x2-x3) + 2*(alpha(1,0)*thetak + beta(1,0))*(y3-y2)*(x2-x3))/2;
+            Ke(1,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y3-y1) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x1-x3) + (alpha(1,0)*thetak + beta(1,0))*((y3-y2)*(x1-x3) + (x2-x3)*(y3-y1)))/2;
+            Ke(2,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x2-x1) + (alpha(1,0)*thetak + beta(1,0))*((y3-y2)*(x2-x1) + (x2-x3)*(y1-y2)))/2;
+            Ke(0,1) = Ke(1,0);
+            Ke(1,1) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y1)*(y3-y1) + (alpha(1,1)*thetak + beta(1,1))*(x1-x3)*(x1-x3) + 2*(alpha(1,0)*thetak + beta(1,0))*(y3-y1)*(x1-x3))/2;
+            Ke(2,1) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y1)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x1-x3)*(x2-x1) + (alpha(1,0)*thetak + beta(1,0))*((y3-y1)*(x2-x1) + (x1-x3)*(y1-y2)))/2;
+            Ke(0,2) = Ke(2,0);
+            Ke(1,2) = Ke(2,1);
+            Ke(2,2) = ((alpha(0,0)*thetak + beta(0,0))*(y1-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x1)*(x2-x1) + 2*(alpha(1,0)*thetak + beta(1,0))*(y1-y2)*(x2-x1))/2;
 
 
             /*Utilisation du mapping NodesCorresp.
@@ -219,15 +263,15 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             int num2 = NodesCorresp[n2]->num-1;
             int num3 = NodesCorresp[n3]->num-1;
 
-            Tmp(num1, n1->num-1) += cons/2*Ke(0,0);
-            Tmp(num1, n2->num-1) += cons/2*Ke(0,1);
-            Tmp(num1, n3->num-1) += cons/2*Ke(0,2);
-            Tmp(num2, n1->num-1) += cons/2*Ke(1,0);
-            Tmp(num2, n2->num-1) += cons/2*Ke(1,1);
-            Tmp(num2, n3->num-1) += cons/2*Ke(1,2);
-            Tmp(num3, n1->num-1) += cons/2*Ke(2,0);
-            Tmp(num3, n2->num-1) += cons/2*Ke(2,1);
-            Tmp(num3, n3->num-1) += cons/2*Ke(2,2);
+            Tmp(num1, n1->num-1) += (Ke(0,0) + KTe(0,0))/J;
+            Tmp(num1, n2->num-1) += (Ke(0,1) + KTe(0,0))/J;
+            Tmp(num1, n3->num-1) += (Ke(0,2) + KTe(0,0))/J;
+            Tmp(num2, n1->num-1) += (Ke(1,0) + KTe(1,0))/J;
+            Tmp(num2, n2->num-1) += (Ke(1,1) + KTe(1,0))/J;
+            Tmp(num2, n3->num-1) += (Ke(1,2) + KTe(1,0))/J;
+            Tmp(num3, n1->num-1) += (Ke(2,0) + KTe(2,0))/J;
+            Tmp(num3, n2->num-1) += (Ke(2,1) + KTe(2,0))/J;
+            Tmp(num3, n3->num-1) += (Ke(2,2) + KTe(2,0))/J;
         }
     }
 
@@ -290,13 +334,13 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         double gradAvg_y = conditions.yGradient;
 
         //Condition correspondant au noeud 1: temperature moyenne.
-        int numC1= C1->num-1;
+        unsigned int numC1= C1->num-1;
         vector<double> c(nodes.size());//coefficients
 
         f_function(c,nodes,elements,surfaceRegion,1);
 
         vol = 0.0;
-        for(int j=0; j<nodes.size(); j++)
+        for(unsigned int j=0; j<nodes.size(); j++)
         {
             Tmp(numC1,j) = c[j];
             vol += c[j];
@@ -305,11 +349,11 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         f[numC1] = Tavg*vol;//condition
 
         //Conditions sur les noeuds 2 3 et 4.
-        int numC2 = C2->num-1;
-        int numC3 = C3->num-1;
-        int numC4 = C4->num-1;
+        unsigned int numC2 = C2->num-1;
+        unsigned int numC3 = C3->num-1;
+        unsigned int numC4 = C4->num-1;
 
-        for(int j=0; j<nodes.size(); j++)
+        for(unsigned int j=0; j<nodes.size(); j++)
         {
             Tmp(numC2,j) = 0;
             Tmp(numC3,j) = 0;
@@ -344,10 +388,10 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
 
         //conditions sur f correspondant aux noeuds à droite et en haut
-        for(int i=0;i<RightNodes.size();i++)
+        for(unsigned int i=0;i<RightNodes.size();i++)
         {
-            int numNode = RightNodes[i]->num-1;
-            for(int j=0; j<nodes.size(); j++)
+            unsigned int numNode = RightNodes[i]->num-1;
+            for(unsigned int j=0; j<nodes.size(); j++)
             {
                 Tmp(numNode,j) = 0;
 
@@ -366,11 +410,11 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             f[numNode] = gradAvg_x * lx;
         }
 
-        for(int i=0;i<TopNodes.size();i++)
+        for(unsigned int i=0;i<TopNodes.size();i++)
         {
-            int numNode = TopNodes[i]->num-1;
+            unsigned int numNode = TopNodes[i]->num-1;
 
-            for(int j=0; j<nodes.size(); j++)
+            for(unsigned int j=0; j<nodes.size(); j++)
             {
                 Tmp(numNode,j) = 0;
 
@@ -395,68 +439,6 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     gmm::copy(Tmp,K);
     gmm::lu_solve(K, x, f);
 
-    //gradiant moyen x
-    double fluxx = 0.0;
-    vector<double> g(nodes.size());
-    for(unsigned int i = 0; i < elements.size(); i++)
-    {
-        if(elements[i]->type == 2)//If triangle
-        {
-            Node *n1 = elements[i]->nodes[0];
-            Node *n2 = elements[i]->nodes[1];
-            Node *n3 = elements[i]->nodes[2];
-            double x1 = n1->x;
-            double y1 = n1->y;
-            double x2 = n2->x;
-            double y2 = n2->y;
-            double x3 = n3->x;
-            double y3 = n3->y;
-            double cons = surfaceRegion[elements[i]->region][0];
-
-            g[n1->num-1] += cons*(1./2)*(y2-y3);
-            g[n2->num-1] += cons*(1./2)*(y3-y1);
-            g[n3->num-1] += cons*(1./2)*(y1-y2);
-        }
-    }
-    for(unsigned int i = 0; i < nodes.size(); i++)
-    {
-        fluxx += g[i] * x[i];
-    }
-    fluxx = fluxx/vol;
-
-    //gradiant moyen y
-    double fluxy = 0.0;
-    vector<double> gy(nodes.size());
-    for(unsigned int i = 0; i < elements.size(); i++)
-    {
-        if(elements[i]->type == 2)//If triangle
-        {
-            Node *n1 = elements[i]->nodes[0];
-            Node *n2 = elements[i]->nodes[1];
-            Node *n3 = elements[i]->nodes[2];
-            double x1 = n1->x;
-            double y1 = n1->y;
-            double x2 = n2->x;
-            double y2 = n2->y;
-            double x3 = n3->x;
-            double y3 = n3->y;
-            double cons = surfaceRegion[elements[i]->region][0];
-
-            gy[n1->num-1] += cons*(1./2)*(x3-x2);
-            gy[n2->num-1] += cons*(1./2)*(x1-x3);
-            gy[n3->num-1] += cons*(1./2)*(x2-x1);
-        }
-    }
-    for(unsigned int i = 0; i < nodes.size(); i++)
-    {
-        fluxy += gy[i] * x[i];
-    }
-    fluxy = fluxy/vol;
-
-    cout << "Average heat flux along x: q_x = " << fluxx << " [m K/s]" << endl;
-    cout << "Average heat flux along y: q_y = " << fluxy << " [m K/s]" << endl;
-
-
     //Solution (écriture)
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
@@ -479,7 +461,7 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
             }
             else
             {
-                cons = surfaceRegion[elements[i]->region][1];// Dans le cas du calcul du vecteur f.
+                cons = surfaceRegion[elements[i]->region][0];// Dans le cas du calcul du vecteur f.
             }
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];

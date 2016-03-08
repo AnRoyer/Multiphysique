@@ -4,14 +4,14 @@
 //Structure contenant les infos des noeuds
 struct Node
 {
-    int num;
+    unsigned int num;
     double x, y, z;
 };
 
 //Structure contenant les infos des éléments
 struct Element
 {
-    int num, type, region;
+    unsigned int num, type, region;
     std::vector<Node*> nodes;
 };
 
