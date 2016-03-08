@@ -12,19 +12,19 @@ using namespace std;
 Code de calcul FEM
 */
 
-//type = 0 : thermique, type = 1 = électrique
+//type = 0 : thermique, type = 1 = Ã©lectrique
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solution, FemFlag type, FemFlag method, Periodique &conditions)
 {
     //Boundaries
-    map<int, double> linesRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
-    map<int, std::vector<double> > surfaceRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 2 (surface)
+    map<int, double> linesRegion;//Stock le lien entre le numÃ©ro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les rÃ©gions de dimension 1 (ligne)
+    map<int, std::vector<double> > surfaceRegion;//Stock le lien entre le numÃ©ro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les rÃ©gions de dimension 2 (surface)
 
-    /*Chargement des paramètres de la struc Parameter contenant les paramètres d'entrées.
-    A chaque éléments de physicals, on lui associe l'élément de "parameters" correspondant. La correspondance est mappé dans linesRegion et surfaceRegion en fonction du type de paramètre
+    /*Chargement des paramÃ¨tres de la struc Parameter contenant les paramÃ¨tres d'entrÃ©es.
+    A chaque Ã©lÃ©ments de physicals, on lui associe l'Ã©lÃ©ment de "parameters" correspondant. La correspondance est mappÃ© dans linesRegion et surfaceRegion en fonction du type de paramÃ¨tre
     */
     for(unsigned int i = 0; i < physicals.size(); i++)
     {
-        //Si paramètre correspondant à une ligne (ex : condition de bord)
+        //Si paramÃ¨tre correspondant Ã  une ligne (ex : condition de bord)
         if(physicals[i]->dim == 1 && method == DIRICHLET)
         {
             for(unsigned int j = 0; j < parameters.size(); j++)
@@ -90,7 +90,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     //Tri des noeuds
     Node *C1,*C2,*C3,*C4;//pointeurs vers les noeuds des coins
     vector<Node*> LeftNodes,RightNodes,TopNodes,BottomNodes;//vecteurs contenant les noeuds des bords
-    map<Node*, Node*> NodesCorresp;//Vecteur de correspondance qui servira à additionner les lignes des noeuds en vis-a-vis
+    map<Node*, Node*> NodesCorresp;//Vecteur de correspondance qui servira Ã  additionner les lignes des noeuds en vis-a-vis
 
     double xmin = nodes[0]->x;
     double ymin = nodes[0]->y;
@@ -118,7 +118,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
     for(unsigned int i = 0; i < nodes.size(); i++)//Classement
     {
-        NodesCorresp[nodes[i]] = nodes[i];//Initialisation du mapping en faisant pointer tous les noeuds vers eux-mêmes
+        NodesCorresp[nodes[i]] = nodes[i];//Initialisation du mapping en faisant pointer tous les noeuds vers eux-mÃªmes
         double x = nodes[i]->x;
         double y = nodes[i]->y;
         int num = nodes[i]->num;
@@ -156,7 +156,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
     }
 
-    if(method == PERIODIC)/*Si conditions periodiques alors le mapping "NodesCorresp" associe les noeuds en vis-a-vis. Sinon, le mapping est quand même utilisé mais tous les noeuds sont mappés vers eux-mêmes.*/
+    if(method == PERIODIC)/*Si conditions periodiques alors le mapping "NodesCorresp" associe les noeuds en vis-a-vis. Sinon, le mapping est quand mÃªme utilisÃ© mais tous les noeuds sont mappÃ©s vers eux-mÃªmes.*/
     {
         for(unsigned int i = 0; i < LeftNodes.size(); i++)
         {
@@ -197,43 +197,54 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             double y2 = n2->y;
             double x3 = n3->x;
             double y3 = n3->y;
-            double cons = surfaceRegion[elements[i]->region][0];// alpha
+            double theta1 = ; // Temperature au noeud 1
+            double theta2 = ; // Temperature au noeud 2
+            double theta3 = ; // Temperature au noeud 3 
+            // double cons = surfaceRegion[elements[i]->region][0];// alpha
 
-            gmm::dense_matrix<double> Ke(3,3);
+            gmm::dense_matrix<double> Ke(3,3); // Second terme avec la conductivitÃ© sous forme matricielle
+            gmm::dense_matrix<double> KTe(3,1); // Le nouveau terme ne dÃ©pend pas de J, on le prend comme un vecteur qu'on calculera Ã  part
+            gmm::dense_matrix<double> alpha(2,2); // matrice alpha
+            gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivitÃ©
             double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
+            
+            KTe(0,0) = ((theta2 - theta1)*(alpha(0,0)*(y3-y2)*(y3-y1) + alpha(1,1)*(x2-x3)*(x1-x3) + alpha(0,1)*((x2-x3)*(y3-y1) + (y3-y2)*(x1-x3))) + (theta3-theta1)*(alpha(0,0)*(y3-y2)*(y1-y2) + alpha(1,1)*(x2-x3)*(x2-x1) + alpha(1,0)*((x2-x3)*(y1-y2) + (x2-x1)*(y3-y2))))/6;
+            KTe(1,0) = (- (theta2 - theta1)*(alpha(0,0)*(y3-y1)*(y3-y1) + alpha(1,1)*(x1-x3)*(x1-x3) + 2*alpha(0,1)*(x1-x3)*(y3-y1)) - (theta3-theta1)*(alpha(0,0)*(y3-y1)*(y1-y2) + alpha(1,1)*(x1-x3)*(x2-x1) + alpha(1,0)*((x1-x3)*(y1-y2) + (x2-x1)*(y3-y1))))/6;
+            KTe(2,0) = (- (theta2 - theta1)*(alpha(0,0)*(y3-y1)*(y1-y2) + alpha(1,1)*(x2-x1)*(x1-x3) + alpha(0,1)*((x1-x3)*(y1-y2) + (y3-y1)*(x2-x1))) - (theta3-theta1)*(alpha(0,0)*(y1-y2)*(y1-y2) + alpha(1,1)*(x2-x1)*(x2-x1) + 2*alpha(1,0)*(x2-x1)*(y1-y2)))/6;
 
-            Ke(0,0) = ((y2-y3)*(y2-y3)+(x3-x2)*(x3-x2))/J;
-            Ke(0,1) = (- (x2-x3)*(x1-x3) - (y2-y3)*(y1-y3))/J;
-            Ke(0,2) = ((x2-x3)*(x1-x2) + (y2-y3)*(y1-y2))/J;
-            Ke(1,0) = ((x1-x3)*(x3-x2) + (y1-y3)*(y3-y2))/J;
-            Ke(1,1) = ((x1-x3)*(x1-x3) + (y1-y3)*(y1-y3))/J;
-            Ke(1,2) = (- (x1-x3)*(x1-x2) - (y1-y3)*(y1-y2))/J;
-            Ke(2,0) = ((x1-x2)*(x2-x3) + (y1-y2)*(y2-y3))/J;
-            Ke(2,1) = (- (x1-x2)*(x1-x3) - (y1-y2)*(y1-y3))/J;
-            Ke(2,2) = ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))/J;
+            
+            Ke(0,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y3-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x2-x3) + 2*(alpha(1,0)*thetak + beta(1,0))*(y3-y2)*(x2-x3))/2;
+            Ke(1,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y3-y1) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x1-x3) + (alpha(1,0)*thetak + beta(1,0))*((y3-y2)*(x1-x3) + (x2-x3)*(y3-y1)))/2;
+            Ke(2,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x2-x1) + (alpha(1,0)*thetak + beta(1,0))*((y3-y2)*(x2-x1) + (x2-x3)*(y1-y2)))/2;
+            Ke(0,1) = Ke(1,0);
+            Ke(1,1) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y1)*(y3-y1) + (alpha(1,1)*thetak + beta(1,1))*(x1-x3)*(x1-x3) + 2*(alpha(1,0)*thetak + beta(1,0))*(y3-y1)*(x1-x3))/2;
+            Ke(2,1) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y1)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x1-x3)*(x2-x1) + (alpha(1,0)*thetak + beta(1,0))*((y3-y1)*(x2-x1) + (x1-x3)*(y1-y2)))/2;
+            Ke(0,2) = Ke(2,0);
+            Ke(1,2) = Ke(2,1);
+            Ke(2,2) = ((alpha(0,0)*thetak + beta(0,0))*(y1-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x1)*(x2-x1) + 2*(alpha(1,0)*thetak + beta(1,0))*(y1-y2)*(x2-x1))/2;
 
 
             /*Utilisation du mapping NodesCorresp.
-            Si une valeur doit être ajoutée à la ligne d'un noeud de droite, celle-ci est directement ajoutée à la ligne correspondant au noeud de gauche en vis-a-vis*/
+            Si une valeur doit Ãªtre ajoutÃ©e Ã  la ligne d'un noeud de droite, celle-ci est directement ajoutÃ©e Ã  la ligne correspondant au noeud de gauche en vis-a-vis*/
             int num1 = NodesCorresp[n1]->num-1;
             int num2 = NodesCorresp[n2]->num-1;
             int num3 = NodesCorresp[n3]->num-1;
 
-            Tmp(num1, n1->num-1) += cons/2*Ke(0,0);
-            Tmp(num1, n2->num-1) += cons/2*Ke(0,1);
-            Tmp(num1, n3->num-1) += cons/2*Ke(0,2);
-            Tmp(num2, n1->num-1) += cons/2*Ke(1,0);
-            Tmp(num2, n2->num-1) += cons/2*Ke(1,1);
-            Tmp(num2, n3->num-1) += cons/2*Ke(1,2);
-            Tmp(num3, n1->num-1) += cons/2*Ke(2,0);
-            Tmp(num3, n2->num-1) += cons/2*Ke(2,1);
-            Tmp(num3, n3->num-1) += cons/2*Ke(2,2);
+            Tmp(num1, n1->num-1) += (Ke(0,0) + KTe(0,0))/J;
+            Tmp(num1, n2->num-1) += (Ke(0,1) + KTe(0,0))/J;
+            Tmp(num1, n3->num-1) += (Ke(0,2) + KTe(0,0))/J;
+            Tmp(num2, n1->num-1) += (Ke(1,0) + KTe(1,0))/J;
+            Tmp(num2, n2->num-1) += (Ke(1,1) + KTe(1,0))/J;
+            Tmp(num2, n3->num-1) += (Ke(1,2) + KTe(1,0))/J;
+            Tmp(num3, n1->num-1) += (Ke(2,0) + KTe(2,0))/J;
+            Tmp(num3, n2->num-1) += (Ke(2,1) + KTe(2,0))/J;
+            Tmp(num3, n3->num-1) += (Ke(2,2) + KTe(2,0))/J;
         }
     }
 
     //f vector
     vector<double> f(nodes.size());
-    f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
+    f_function(f,nodes,elements,surfaceRegion,0); //dernier paramÃ¨tre de la fonction f nul =>
 
     //Dirichlet sur K
     if(method == DIRICHLET)
@@ -343,7 +354,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         f[numC4] = gradAvg_y * ly;
 
 
-        //conditions sur f correspondant aux noeuds à droite et en haut
+        //conditions sur f correspondant aux noeuds Ã  droite et en haut
         for(int i=0;i<RightNodes.size();i++)
         {
             int numNode = RightNodes[i]->num-1;
@@ -457,7 +468,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     cout << "Average heat flux along y: q_y = " << fluxy << " [m K/s]" << endl;
 
 
-    //Solution (écriture)
+    //Solution (Ã©criture)
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
         std::vector<double> val(1, x[i]);
