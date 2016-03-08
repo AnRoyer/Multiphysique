@@ -6,10 +6,10 @@
 
 enum FemFlag
 {
-    THERMAL,
-    ELECTRIC,
-    DIRICHLET,
-    PERIODIC
+    THERMALFLAG,
+    ELECTRICFLAG,
+    DIRICHLETFLAG,
+    PERIODICFLAG
 };
 
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solution, FemFlag type, FemFlag method, Periodique &conditions);

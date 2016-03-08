@@ -31,19 +31,21 @@ int main(int argc, char **argv)
 
     vector<Parameter*> parameters;
     Periodique conditions;
+    cout << "ok" << endl;
     readPHY(argv[2], parameters, conditions);
+    cout << "ok2" << endl;
 
     for(unsigned int i = 0; i < parameters.size(); i++)
     {
         if(parameters[i]->dim == 1 && conditions.exist == false)
         {
-            cout << "Parameter " << parameters[i]->name << " has temperature of " << parameters[i]->value[0] << " K and a electrical potential of " << parameters[i]->value[1] << " V." << endl;
+            cout << "Parameter " << parameters[i]->name << " has temperature of " << parameters[i]->temperature << " K and a electrical potential of " << parameters[i]->voltage << " V." << endl;
         }
         else if(parameters[i]->dim == 2)
         {
             cout << "Parameter " << parameters[i]->name << " has:" << endl;
-            cout << "\t - A thermal diffusivity of " << parameters[i]->value[0] << " m^2/s with a heat production of " << parameters[i]->value[1] << " K/s;" << endl;
-            cout << "\t - A electrical conductivity of " << parameters[i]->value[2] << " S/m with a change in charge density of " << parameters[i]->value[3] << " A/m^3." << endl;
+            cout << "\t - A thermal conductivity of (" << parameters[i]->thermalConductivity[0] << "; " << parameters[i]->thermalConductivity[1] << ") m^2/s with a heat production of " << parameters[i]->thermalGeneration << " K/s;" << endl;
+            cout << "\t - A electrical conductivity of (" << parameters[i]->electricalConductivity[0] << "; " << parameters[i]->electricalConductivity[1] << ") S/m with a change in charge density of " << parameters[i]->electricalGeneration << " A/m^3." << endl;
         }
     }
 
@@ -59,11 +61,11 @@ int main(int argc, char **argv)
 
     if(conditions.exist == true)
     {
-        fem(nodes, elements, physicals, parameters, solutionT, THERMAL, PERIODIC, conditions);
+        fem(nodes, elements, physicals, parameters, solutionT, THERMALFLAG, PERIODICFLAG, conditions);
     }
     else
     {
-        fem(nodes, elements, physicals, parameters, solutionT, THERMAL, DIRICHLET, conditions);
+        fem(nodes, elements, physicals, parameters, solutionT, THERMALFLAG, DIRICHLETFLAG, conditions);
     }
 
     writeMSH((char*)"solT.pos", 0, 1, solutionT);

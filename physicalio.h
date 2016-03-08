@@ -6,7 +6,14 @@ struct Parameter
 {
     std::string name;
     int dim;
-    std::vector<double> value;//Ex : Temperature boundary or thermal diffusivity; -1 for null
+    //line parameters
+    double temperature;
+    double voltage;
+    //surface parameters
+    std::vector<double> thermalConductivity;
+    std::vector<double> electricalConductivity;
+    double thermalGeneration;
+    double electricalGeneration;
 };
 
 struct Periodique
@@ -17,6 +24,33 @@ struct Periodique
     bool exist;
 };
 
+struct XMLparam
+{
+    std::string name;
+    std::string value;
+};
+
+enum Type
+{
+    DIRICHLET,
+    PERIODIC
+};
+
+enum Nature
+{
+    THERMAL,
+    ELECTRICAL
+};
+
+enum Dim
+{
+    LINE,
+    SURFACE,
+    GLOBAL
+};
+
 void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions);
+XMLparam readParam(std::ifstream& fp);
+double readValue(std::ifstream& fp);
 
 #endif // PHYSICALIO_H_INCLUDED

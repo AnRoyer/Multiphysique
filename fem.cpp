@@ -25,7 +25,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     for(unsigned int i = 0; i < physicals.size(); i++)
     {
         //Si paramètre correspondant à une ligne (ex : condition de bord)
-        if(physicals[i]->dim == 1 && method == DIRICHLET)
+        if(physicals[i]->dim == 1 && method == DIRICHLETFLAG)
         {
             for(unsigned int j = 0; j < parameters.size(); j++)
             {
@@ -36,18 +36,18 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                         cout << "Error: file.phy and file.msh do not correspond" << endl;
                     }
 
-                    if(type == 0)
+                    if(type == THERMALFLAG)
                     {
-                        if(parameters[j]->value[0] != -1)
+                        if(parameters[j]->temperature != -1)
                         {
-                            linesRegion[physicals[i]->num] = parameters[j]->value[0];
+                            linesRegion[physicals[i]->num] = parameters[j]->voltage;
                         }
                     }
-                    else if(type == 1)
+                    else if(type == ELECTRICFLAG)
                     {
-                        if(parameters[j]->value[1] != -1)
+                        if(parameters[j]->voltage != -1)
                         {
-                            linesRegion[physicals[i]->num] = parameters[j]->value[1];
+                            linesRegion[physicals[i]->num] = parameters[j]->voltage;
                         }
                     }
                 }
@@ -64,21 +64,21 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                         cout << "Error: file.phy and file.msh do not correspond" << endl;
                     }
 
-                    if(type == 0)
+                    if(type == THERMALFLAG)
                     {
                         std::vector<double> v(2);
 
-                        v[0] = parameters[j]->value[0];
-                        v[1] = parameters[j]->value[1];
+                        v[0] = parameters[j]->thermalConductivity[0];
+                        v[1] = parameters[j]->thermalGeneration;
 
                         surfaceRegion[physicals[i]->num] = v;
                     }
-                    else if(type == 1)
+                    else if(type == ELECTRICFLAG)
                     {
                         std::vector<double> v(2);
 
-                        v[0] = parameters[j]->value[2];
-                        v[1] = parameters[j]->value[3];
+                        v[0] = parameters[j]->electricalConductivity[0];
+                        v[1] = parameters[j]->electricalGeneration;
 
                         surfaceRegion[physicals[i]->num] = v;
                     }
@@ -156,7 +156,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
     }
 
-    if(method == PERIODIC)/*Si conditions periodiques alors le mapping "NodesCorresp" associe les noeuds en vis-a-vis. Sinon, le mapping est quand même utilisé mais tous les noeuds sont mappés vers eux-mêmes.*/
+    if(method == PERIODICFLAG)/*Si conditions periodiques alors le mapping "NodesCorresp" associe les noeuds en vis-a-vis. Sinon, le mapping est quand même utilisé mais tous les noeuds sont mappés vers eux-mêmes.*/
     {
         for(unsigned int i = 0; i < LeftNodes.size(); i++)
         {
@@ -236,7 +236,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
 
     //Dirichlet sur K
-    if(method == DIRICHLET)
+    if(method == DIRICHLETFLAG)
     {
         for(unsigned int i = 0; i < elements.size(); i++)
         {
@@ -283,7 +283,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     double lx = abs(C2->x - C1->x);
     double ly = abs(C4->y - C1->y);
     double vol= lx * ly;//Volume du domaine
-    if(method == PERIODIC)
+    if(method == PERIODICFLAG)
     {
         double Tavg = conditions.meanTemperature;
         double gradAvg_x = conditions.xGradient;
