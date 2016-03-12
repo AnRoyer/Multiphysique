@@ -5,6 +5,7 @@
 #include <string>
 #include "gmm/gmm.h"
 #include "fem.h"
+#include "NewtonRaphson_v1.h"
 
 using namespace std;
 
