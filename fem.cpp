@@ -201,6 +201,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
     }
     /*
+
+
     //K matrix
     gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());
 
