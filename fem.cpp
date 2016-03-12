@@ -200,12 +200,12 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             }
         }
     }
-    /*
+
 
 
     //K matrix
     gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());
-
+    /*
     for(unsigned int i = 0; i < elements.size(); i++)
     {
         if(elements[i]->type == 2)//If triangle
@@ -282,6 +282,38 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     vector<double> f(nodes.size());
     f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
 
+    std::vector<double> theta_k(nodes.size());
+    std::vector<double> delta_theta_k(nodes.size());
+    //Including the Dirichlet condition on theta_0
+    for(unsigned int i = 0; i < elements.size(); i++)
+    {
+        if(elements[i]->type == 1)//If line
+        {
+            if(linesRegion.count(elements[i]->region) == 1)//If linesRegion contains elements[i]->region
+            {
+                for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
+                {
+                    theta_k[elements[i]->nodes[j]->num-1] = linesRegion[elements[i]->region];
+                }
+            }
+        }
+    }
+
+
+    bool Criterion = false;
+
+    while(Criterion == false)
+    {
+        NewtonRaphson(nodes, elements, physicals, parameters,
+					solution, theta_k,Tmp,
+					f,method,linesRegion, NodesCorresp,delta_theta_k);
+
+        Criterion = End_Criterion(theta_k, delta_theta_k);
+    }
+
+
+
+
     /*
     //Dirichlet sur K
     if(method == DIRICHLETFLAG)
@@ -328,6 +360,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
     */
 
+
+    /* POUR L'instant pas de conditions periodiques
     //Conditions periodiques sur K et f.
     double lx = abs(C2->x - C1->x);
     double ly = abs(C4->y - C1->y);
@@ -438,17 +472,20 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             f[numNode] = gradAvg_y * ly;
         }
     }
+    */
 
+    /*
     //System
     vector<double> x(nodes.size());
     gmm::csr_matrix<double> K;
     gmm::copy(Tmp,K);
     gmm::lu_solve(K, x, f);
+    */
 
     //Solution (écriture)
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
-        std::vector<double> val(1, x[i]);
+        std::vector<double> val(1, theta_k[i]);
         solution[nodes[i]] = val;
     }
 }
