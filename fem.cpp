@@ -200,7 +200,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             }
         }
     }
-
+    /*
     //K matrix
     gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());
 
@@ -257,8 +257,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             Ke(2,2) = ((alpha(0,0)*thetak + beta(0,0))*(y1-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x1)*(x2-x1) + 2*(alpha(1,0)*thetak + beta(1,0))*(y1-y2)*(x2-x1))/2;
 
 
-            /*Utilisation du mapping NodesCorresp.
-            Si une valeur doit être ajoutée à la ligne d'un noeud de droite, celle-ci est directement ajoutée à la ligne correspondant au noeud de gauche en vis-a-vis*/
+            //Utilisation du mapping NodesCorresp.
+            //Si une valeur doit être ajoutée à la ligne d'un noeud de droite, celle-ci est directement ajoutée à la ligne correspondant au noeud de gauche en vis-a-vis
             int num1 = NodesCorresp[n1]->num-1;
             int num2 = NodesCorresp[n2]->num-1;
             int num3 = NodesCorresp[n3]->num-1;
@@ -274,11 +274,13 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             Tmp(num3, n3->num-1) += (Ke(2,2) + KTe(2,0))/J;
         }
     }
+    */
 
     //f vector
     vector<double> f(nodes.size());
     f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
 
+    /*
     //Dirichlet sur K
     if(method == DIRICHLETFLAG)
     {
@@ -322,11 +324,13 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             }
         }
     }
+    */
 
     //Conditions periodiques sur K et f.
     double lx = abs(C2->x - C1->x);
     double ly = abs(C4->y - C1->y);
     double vol= lx * ly;//Volume du domaine
+
     if(method == PERIODICFLAG)
     {
         double Tavg = conditions.meanTemperature;
