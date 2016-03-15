@@ -6,7 +6,6 @@
 #include "gmshio.h"
 #include "physicalio.h"
 #include "fem.h"
-#include "NewtonRaphson_v1.h"
 
 using namespace std;
 

@@ -18,6 +18,7 @@ Code de calcul FEM
 //type = 0 : thermique, type = 1 = électrique
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solution, FemFlag type, FemFlag method, Periodique &conditions)
 {
+    cout << "In FEM.cpp " << endl;
     //Boundaries
     map<int, double> linesRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
     map<int, std::vector<double> > surfaceRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 2 (surface)
@@ -278,7 +279,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
     }
     */
-
+cout << "In FEM.cpp before theta_k." << endl;
     //f vector
     vector<double> f(nodes.size());
     f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
@@ -286,28 +287,51 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     std::vector<double> theta_k(nodes.size());
     std::vector<double> delta_theta_k(nodes.size());
     //Including the Dirichlet condition on theta_0
-    for(unsigned int i = 0; i < elements.size(); i++)
+
+	std::vector<double> flag_theta(nodes.size()); //Vector aimed at keeping in mind the allocation
+	double flag = 145;
+
+    for(unsigned int l = 0; l < elements.size(); l++)
     {
-        if(elements[i]->type == 1)//If line
+        //cout << "In FEM.cpp theta_k edition." << endl;
+        if(elements[l]->type == 1)//If line
         {
-            if(linesRegion.count(elements[i]->region) == 1)//If linesRegion contains elements[i]->region
+            //cout << "We have a line." << endl;
+            if(linesRegion.count(elements[l]->region) == 1)//If linesRegion contains elements[i]->region
             {
-                for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
+                for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
                 {
-                    theta_k[elements[i]->nodes[j]->num-1] = linesRegion[elements[i]->region];
+					if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
+					{
+						theta_k[elements[l]->nodes[j]->num-1] = linesRegion[elements[l]->region];
+						cout << "LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
+						flag_theta[elements[l]->nodes[j]->num-1]= flag;
+					}
                 }
+            }
+        }
+        else
+        {
+            for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
+            {
+				if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
+				{
+					theta_k[elements[l]->nodes[j]->num-1] = rand() % 200 + 300; //Arbitrary value in order not to have a zero vector
+					cout << "NO LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
+					flag_theta[elements[l]->nodes[j]->num-1]= flag;
+				}
             }
         }
     }
 
-
+    cout << "In FEM.cpp before loop." << endl;
     bool Criterion = false;
 
     while(Criterion == false)
     {
         NewtonRaphson(nodes, elements, physicals, parameters,
 					solution, theta_k,Tmp,
-					f,method,linesRegion, NodesCorresp,delta_theta_k);
+					f,method,linesRegion, NodesCorresp,delta_theta_k,surfaceRegion);
 
         Criterion = End_Criterion(theta_k, delta_theta_k);
     }
