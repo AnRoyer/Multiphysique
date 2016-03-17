@@ -1,3 +1,5 @@
+//v2 is for the new tangent stiffness matrix function
+
 #include <iostream>
 #include <cstdio>
 #include <vector>
@@ -180,6 +182,8 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
 
             tmp_vec[0]=0;
             tmp_vec[1]=0;
+            tmp_vec_2[0]=0;
+            tmp_vec_2[1]=0;
 
             //cout << "Test A !" << endl;
 
@@ -188,8 +192,8 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
 
             	for(unsigned int j = 0; j<3 ; j++)
             	{
-            		tmp_vec[0] = tmp_vec[0]+theta_nodes[j]*grad_phi(0,j);
-            		tmp_vec[1] =tmp_vec[1]+ theta_nodes[j]*grad_phi(1,j);
+            		tmp_vec[0] += theta_nodes[j]*grad_phi(0,j);
+            		tmp_vec[1] += theta_nodes[j]*grad_phi(1,j);
             	}
 
             	for(unsigned int j = 0; j<2; j++)
@@ -257,6 +261,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
     {
         if(elements[i]->type == 2)//If triangle
         {
+            //cout << "In LOOP 1 !" << endl;
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];
             Node *n3 = elements[i]->nodes[2];
@@ -266,44 +271,127 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             double y2 = n2->y;
             double x3 = n3->x;
             double y3 = n3->y;
-            double theta1 = theta_k[n1->num-1]; // Temperature au noeud 1
-            double theta2 = theta_k[n2->num-1]; // Temperature au noeud 2
-            double theta3 = theta_k[n3->num-1]; // Temperature au noeud 3
-            double thetak = (theta1+theta2+theta3)/3;
-            // double cons = surfaceRegion[elements[i]->region][0];// alpha
-
-            gmm::dense_matrix<double> Ke(3,3); // Second terme avec la conductivité sous forme matricielle
-            gmm::dense_matrix<double> KTe(3,1); // Le nouveau terme ne dépend pas de J, on le prend comme un vecteur qu'on calculera à part
-            gmm::dense_matrix<double> alpha(2,2); // matrice alpha
+            double qint_I; //Contribution of a given node to qint
 
             alpha(0,0) = surfaceRegion[elements[i]->region][1];
             alpha(0,1) = surfaceRegion[elements[i]->region][2];
             alpha(1,0) = surfaceRegion[elements[i]->region][3];
             alpha(1,1) = surfaceRegion[elements[i]->region][4];
 
-            gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
-
             beta(0,0) = surfaceRegion[elements[i]->region][5];
             beta(0,1) = surfaceRegion[elements[i]->region][6];
             beta(1,0) = surfaceRegion[elements[i]->region][7];
             beta(1,1) = surfaceRegion[elements[i]->region][8];
 
-            double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
+            std::vector<double> theta_nodes(3);//Temperature at nodes
+            theta_nodes[0] = theta_k[n1->num-1];
+            theta_nodes[1] = theta_k[n2->num-1];
+            theta_nodes[2] = theta_k[n3->num-1];
+            double thetam = (theta_nodes[0]+theta_nodes[1]+theta_nodes[2])/3;//Average temperature on the element
+            double detJ = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
 
-            KTe(0,0) = ((theta2 - theta1)*(alpha(0,0)*(y3-y2)*(y3-y1) + alpha(1,1)*(x2-x3)*(x1-x3) + alpha(0,1)*((x2-x3)*(y3-y1) + (y3-y2)*(x1-x3))) + (theta3-theta1)*(alpha(0,0)*(y3-y2)*(y1-y2) + alpha(1,1)*(x2-x3)*(x2-x1) + alpha(1,0)*((x2-x3)*(y1-y2) + (x2-x1)*(y3-y2))))/6;
-            KTe(1,0) = (- (theta2 - theta1)*(alpha(0,0)*(y3-y1)*(y3-y1) + alpha(1,1)*(x1-x3)*(x1-x3) + 2*alpha(0,1)*(x1-x3)*(y3-y1)) - (theta3-theta1)*(alpha(0,0)*(y3-y1)*(y1-y2) + alpha(1,1)*(x1-x3)*(x2-x1) + alpha(1,0)*((x1-x3)*(y1-y2) + (x2-x1)*(y3-y1))))/6;
-            KTe(2,0) = (- (theta2 - theta1)*(alpha(0,0)*(y3-y1)*(y1-y2) + alpha(1,1)*(x2-x1)*(x1-x3) + alpha(0,1)*((x1-x3)*(y1-y2) + (y3-y1)*(x2-x1))) - (theta3-theta1)*(alpha(0,0)*(y1-y2)*(y1-y2) + alpha(1,1)*(x2-x1)*(x2-x1) + 2*alpha(1,0)*(x2-x1)*(y1-y2)))/6;
+
+            gmm::dense_matrix<double> kappa(2,2); //Conductivity tensor at given temperature
+
+            for (unsigned int k = 0; k<2;k++)
+            {
+                for(unsigned int j = 0 ; j<2; j++)
+                {
+                    kappa(k,j) = alpha (k,j)*thetam+beta(k,j);
+                }
+            }
 
 
-            Ke(0,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y3-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x2-x3) + 2*(alpha(1,0)*thetak + beta(1,0))*(y3-y2)*(x2-x3))/2;
-            Ke(1,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y3-y1) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x1-x3) + (alpha(1,0)*thetak + beta(1,0))*((y3-y2)*(x1-x3) + (x2-x3)*(y3-y1)))/2;
-            Ke(2,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x2-x1) + (alpha(1,0)*thetak + beta(1,0))*((y3-y2)*(x2-x1) + (x2-x3)*(y1-y2)))/2;
-            Ke(0,1) = Ke(1,0);
-            Ke(1,1) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y1)*(y3-y1) + (alpha(1,1)*thetak + beta(1,1))*(x1-x3)*(x1-x3) + 2*(alpha(1,0)*thetak + beta(1,0))*(y3-y1)*(x1-x3))/2;
-            Ke(2,1) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y1)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x1-x3)*(x2-x1) + (alpha(1,0)*thetak + beta(1,0))*((y3-y1)*(x2-x1) + (x1-x3)*(y1-y2)))/2;
-            Ke(0,2) = Ke(2,0);
-            Ke(1,2) = Ke(2,1);
-            Ke(2,2) = ((alpha(0,0)*thetak + beta(0,0))*(y1-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x1)*(x2-x1) + 2*(alpha(1,0)*thetak + beta(1,0))*(y1-y2)*(x2-x1))/2;
+            gmm::dense_matrix<double> inv_J(2,2); //Inverse of the Jacobian Matrix
+            inv_J(0,0) = 1/detJ*(y3-y1);
+            inv_J(0,1) = 1/detJ*(y1-y2);
+            inv_J(1,0) = 1/detJ*(x3-x1);
+            inv_J(1,1) = 1/detJ*(x2-x1);
+
+            gmm::dense_matrix<double> grad_phi(2,3);
+            grad_phi(0,0) = -1;
+            grad_phi(1,0) = -1;
+            grad_phi(0,1) = 1;
+            grad_phi(1,1) = 0;
+            grad_phi(0,2) = 0;
+            grad_phi(1,2) = 1;
+
+            gmm::dense_matrix<double> Ke_1(2,2);
+            gmm::dense_matrix<double> Ke_2(2,2);
+
+
+            std::vector<double> tmp_vec(2);//Temporary vector in the computation of Matrix K
+            std::vector<double> tmp_vec_2(2);//Temporary vector in the computation of K
+
+            tmp_vec[0]=0;
+            tmp_vec[1]=0;
+            tmp_vec_2[0]=0;
+            tmp_vec_2[1]=0;
+
+            //First term of the elementary stiffness matrix
+
+            for(unsigned int j = 0; j<3 ; j++)
+            {
+                tmp_vec[0] += theta_nodes[j]*grad_phi(0,j);
+                tmp_vec[1] += theta_nodes[j]*grad_phi(1,j);
+            }
+            for(unsigned int j = 0; j<2; j++)
+            {
+                for(unsigned int k = 0; k<2 ; k++)
+                {
+                    tmp_vec_2[j] += inv_J(j,k)*tmp_vec[k];
+                }
+            }
+
+             
+
+            for(unsigned int j = 0; j<3; j++)//one contribution per shape function
+            {
+                tmp_vec[0]=0;
+                tmp_vec[1]=0;
+                for(unsigned int k = 0; k<2 ; k++)
+                {
+                    for(unsigned int l = 0 ; l<2; l++)
+                    {
+                        tmp_vec[k] += inv_J(k,l)*grad_phi(l,j);
+                    }
+                }
+                for (unsigned int k =0;k<2;k++)
+                {
+                    for(unsigned int l = 0 ; l<2; l++)
+                    {
+                        Ke_1(k,l) = -detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
+                    }
+                }
+            }
+
+            //Second term of the elementary stiffness matrix
+             gmm::dense_matrix<double> tmp_mat(2,3);
+
+             for(unsigned int j = 0; j<3; j++)//one contribution per shape function
+            {
+
+                for(unsigned int k = 0; k<2 ; k++)
+                {
+                    for(unsigned int l = 0 ; l<2; l++)
+                    {
+                        tmp_mat(k,j) += inv_J(k,l)*grad_phi(l,j);
+                    }
+                }
+            }      
+             for(unsigned int j = 0; j<2; j++)//one contribution per shape function
+            {
+                for(unsigned int k = 0; k<2 ; k++)
+                {
+                    for(unsigned int l = 0; l<2 ; l++)
+                    {
+                        for(unsigned int m = 0; m<2 ; m++)
+                        {
+                            Ke_2(j,k) = -detJ/2*kappa(l,m)*tmp_mat(m,j)*tmp_mat(l,k); 
+                        }
+                    }
+                }
+            }          
 
 
             /*Utilisation du mapping NodesCorresp.
@@ -312,15 +400,15 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             int num2 = NodesCorresp[n2]->num-1;
             int num3 = NodesCorresp[n3]->num-1;
 
-            Tmp(num1, n1->num-1) += (Ke(0,0) + KTe(0,0))/J;
-            Tmp(num1, n2->num-1) += (Ke(0,1) + KTe(0,0))/J;
-            Tmp(num1, n3->num-1) += (Ke(0,2) + KTe(0,0))/J;
-            Tmp(num2, n1->num-1) += (Ke(1,0) + KTe(1,0))/J;
-            Tmp(num2, n2->num-1) += (Ke(1,1) + KTe(1,0))/J;
-            Tmp(num2, n3->num-1) += (Ke(1,2) + KTe(1,0))/J;
-            Tmp(num3, n1->num-1) += (Ke(2,0) + KTe(2,0))/J;
-            Tmp(num3, n2->num-1) += (Ke(2,1) + KTe(2,0))/J;
-            Tmp(num3, n3->num-1) += (Ke(2,2) + KTe(2,0))/J;
+            Tmp(num1, n1->num-1) += (Ke_1(0,0) + Ke_2(0,0));
+            Tmp(num1, n2->num-1) += (Ke_1(0,1) + Ke_2(0,0));
+            Tmp(num1, n3->num-1) += (Ke_1(0,2) + Ke_2(0,0));
+            Tmp(num2, n1->num-1) += (Ke_1(1,0) + Ke_2(1,0));
+            Tmp(num2, n2->num-1) += (Ke_1(1,1) + Ke_2(1,0));
+            Tmp(num2, n3->num-1) += (Ke_1(1,2) + Ke_2(1,0));
+            Tmp(num3, n1->num-1) += (Ke_1(2,0) + Ke_2(2,0));
+            Tmp(num3, n2->num-1) += (Ke_1(2,1) + Ke_2(2,0));
+            Tmp(num3, n3->num-1) += (Ke_1(2,2) + Ke_2(2,0));
         }
     }
     //cout << "In Tangent Stiffness Matrix, before copy" << endl;

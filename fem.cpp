@@ -18,7 +18,7 @@ Code de calcul FEM
 //type = 0 : thermique, type = 1 = électrique
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solution, FemFlag type, FemFlag method, Periodique &conditions)
 {
-    cout << "In FEM.cpp " << endl;
+   // cout << "In FEM.cpp " << endl;
     //Boundaries
     map<int, double> linesRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
     map<int, std::vector<double> > surfaceRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 2 (surface)
@@ -279,7 +279,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
     }
     */
-cout << "In FEM.cpp before theta_k." << endl;
+	//cout << "In FEM.cpp before theta_k." << endl;
     //f vector
     vector<double> f(nodes.size());
     f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
@@ -304,7 +304,7 @@ cout << "In FEM.cpp before theta_k." << endl;
 					if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
 					{
 						theta_k[elements[l]->nodes[j]->num-1] = linesRegion[elements[l]->region];
-						cout << "LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
+						//cout << "LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
 						flag_theta[elements[l]->nodes[j]->num-1]= flag;
 					}
                 }
@@ -316,15 +316,15 @@ cout << "In FEM.cpp before theta_k." << endl;
             {
 				if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
 				{
-					theta_k[elements[l]->nodes[j]->num-1] = rand() % 200 + 300; //Arbitrary value in order not to have a zero vector
-					cout << "NO LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
+					theta_k[elements[l]->nodes[j]->num-1] = rand() % 200 + 50; //Arbitrary value in order not to have a zero vector
+					//cout << "NO LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
 					flag_theta[elements[l]->nodes[j]->num-1]= flag;
 				}
             }
         }
     }
 
-    cout << "In FEM.cpp before loop." << endl;
+    //cout << "In FEM.cpp before loop." << endl;
     bool Criterion = false;
 
     while(Criterion == false)
