@@ -329,6 +329,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                 tmp_vec[0] += theta_nodes[j]*grad_phi(0,j);
                 tmp_vec[1] += theta_nodes[j]*grad_phi(1,j);
             }
+
             for(unsigned int j = 0; j<2; j++)
             {
                 for(unsigned int k = 0; k<2 ; k++)
@@ -451,7 +452,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
 
 bool End_Criterion(std::vector<double> &theta_k, std::vector<double> &delta_theta_k)
 {
-    double eps = 1;
+    double eps = 1e-4;
     for (unsigned int i=0; i<theta_k.size();i++)
     {
         cout<<"Error  = "<<abs(delta_theta_k[i]/theta_k[i])<<endl;
