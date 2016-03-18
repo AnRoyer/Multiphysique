@@ -30,7 +30,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 							 
 	std::vector<double> RHS(nodes.size()); //RHS of Newton Raphson system
     for (unsigned int i=0 ; i<nodes.size(); i++)
-        RHS[i] = qint[i]-qext[i];
+        RHS[i] = qint[i]+qext[i];
 
     //Conditions aux limites sur KT
     if(method == DIRICHLETFLAG)
@@ -88,22 +88,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
         //cout<<"delta_theta_k[i]" <<delta_theta_k[i]<<endl;
 	}
        
-	/* 	BOUCLE POUR VERIFIER LES CONDITIONS SUR LES BORDS
-	 for(unsigned int i = 0; i < elements.size(); i++)
-        {
-            if(elements[i]->type == 1)//If line
-            {
-                if(linesRegion.count(elements[i]->region) == 1)//If linesRegion contains elements[i]->region
-                {
-                    for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
-                    {
-                        cout<<"delta_theta_k["<<elements[i]->nodes[j]->num-1<<"] = "<<delta_theta_k[elements[i]->nodes[j]->num-1]<<endl;
-						cout<<"theta_k["<<elements[i]->nodes[j]->num-1<<"] = "<<theta_k[elements[i]->nodes[j]->num-1]<<endl;
-                    }
-                }
-            }
-        }
-	*/
+	
 }
 
 void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double> > &surfaceRegion, std::vector<Element*> &elements, std::vector<double> &qint)
@@ -165,7 +150,7 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
             gmm::dense_matrix<double> inv_J(2,2); //Inverse of the Jacobian Matrix
             inv_J(0,0) = 1/detJ*(y3-y1);
             inv_J(0,1) = 1/detJ*(y1-y2);
-            inv_J(1,0) = 1/detJ*(x3-x1);
+            inv_J(1,0) = 1/detJ*(x1-x3);
             inv_J(1,1) = 1/detJ*(x2-x1);
 
             gmm::dense_matrix<double> grad_phi(2,3);
@@ -188,9 +173,6 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
 
             //cout << "Test A !" << endl;
 
-            //for (unsigned int l = 0;l<2;l++)
-            //{
-
             	for(unsigned int j = 0; j<3 ; j++)
             	{
             		tmp_vec[0] += theta_nodes[j]*grad_phi(0,j);
@@ -205,18 +187,24 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
             		}
             	}
 
-            	for(unsigned int j = 0; j<2; j++){
+                tmp_vec[0]=0;
+                tmp_vec[1]=0;
+            	for(unsigned int j = 0; j<2; j++)
+                {
             		for(unsigned int k = 0; k<2 ; k++)
             		{
-            			tmp_vec[j]= kappa(j,k)*tmp_vec_2[k];
+            			tmp_vec[j]+= kappa(j,k)*tmp_vec_2[k];
             		}
             	}
-            //}
+
+            
 
             //cout << "Test B !" << endl;
 
             for(unsigned int l = 0; l<3 ; l++)//For each element, there are three contributions to qint at distinct nodes
-            {
+            {   
+                tmp_vec_2[0]=0;
+                tmp_vec_2[1]=0;
                 //cout << "LOOP 3 : l = "<< l << endl;
             	for(unsigned int j = 0; j<2; j++)
                 {
@@ -224,7 +212,7 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
             		for(unsigned int k = 0; k<2 ; k++)
             		{
             		    //cout << "LOOP 5 : k = "<< k << endl;
-            			tmp_vec_2[j] = inv_J(j,k)*grad_phi(k,l);
+            			tmp_vec_2[j] += inv_J(j,k)*grad_phi(k,l);
             		}
             	}
                /* cout << "tmp_vec[0] = "<< tmp_vec[0] << endl;
@@ -311,7 +299,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             gmm::dense_matrix<double> inv_J(2,2); //Inverse of the Jacobian Matrix
             inv_J(0,0) = 1/detJ*(y3-y1);
             inv_J(0,1) = 1/detJ*(y1-y2);
-            inv_J(1,0) = 1/detJ*(x3-x1);
+            inv_J(1,0) = 1/detJ*(x1-x3);
             inv_J(1,1) = 1/detJ*(x2-x1);
 
             gmm::dense_matrix<double> grad_phi(2,3);
@@ -365,9 +353,9 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                 {
                     for(unsigned int l = 0 ; l<2; l++)
                     {
-                        Ke_1(j,0) += -detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
-                        Ke_1(j,1) += -detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
-                        Ke_1(j,2) += -detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
+                        Ke_1(j,0) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
+                        Ke_1(j,1) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
+                        Ke_1(j,2) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
                         //cout<<"Ke_1 = "<<Ke_1(j,0)<<endl;
                     }
                 }
@@ -378,7 +366,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             //Second term of the elementary stiffness matrix
              gmm::dense_matrix<double> tmp_mat(2,3);
 
-             /*for(unsigned int j = 0; j<3; j++)//one contribution per shape function
+             for(unsigned int j = 0; j<3; j++)//one contribution per shape function
             {
 
                 for(unsigned int k = 0; k<2 ; k++)
@@ -388,9 +376,9 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                         tmp_mat(k,j) += inv_J(k,l)*grad_phi(l,j);
                     }
                 }
-            }   */
+            }   
 
-            gmm::mult(inv_J,grad_phi,tmp_mat)  ;
+            //gmm::mult(inv_J,grad_phi,tmp_mat)  ;
              for(unsigned int j = 0; j<3; j++)//one contribution per shape function
             {
                 for(unsigned int k = 0; k<3 ; k++)
@@ -399,17 +387,20 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                     {
                         for(unsigned int m = 0; m<2 ; m++)
                         {
-                            Ke_2(j,k) += -detJ/2*kappa(l,m)*tmp_mat(m,j)*tmp_mat(l,k); 
+                            Ke_2(j,k) += detJ/2*kappa(l,m)*tmp_mat(m,j)*tmp_mat(l,k); 
                             //cout<<"Ke_2("<<j<<k<<") = "<<Ke_2(j,k)<<endl;
                         }
                     }
                 }
             } 
+
+            /*
             cout<<"Ke_2 MATRIX" <<endl;
             cout << Ke_2(0,0)<< ";" <<   Ke_2(0,1)<< ";" <<Ke_2(0,2)<<endl;  
             cout << Ke_2(1,0)<< ";" <<   Ke_2(1,1)<< ";" <<Ke_2(1,2)<<endl; 
             cout << Ke_2(2,0)<< ";" <<   Ke_2(2,1)<< ";" <<Ke_2(2,2)<<endl;   
 
+            
 
             //Pour comparer avec l'ancien code !
             double thetak =thetam;
@@ -425,10 +416,10 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             Ke(2,2) = ((alpha(0,0)*thetak + beta(0,0))*(y1-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x1)*(x2-x1) + 2*(alpha(1,0)*thetak + beta(1,0))*(y1-y2)*(x2-x1))/2;
            
             cout<<"Ke MATRIX" <<endl;
-            cout << Ke(0,0)<< ";" <<   Ke(0,1)<< ";" <<Ke(0,2)<<endl;  
-            cout << Ke(1,0)<< ";" <<   Ke(1,1)<< ";" <<Ke(1,2)<<endl; 
-            cout << Ke(2,0)<< ";" <<   Ke(2,1)<< ";" <<Ke(2,2)<<endl;  
-
+            cout << Ke(0,0)/detJ<< ";" <<   Ke(0,1)/detJ<< ";" <<Ke(0,2)/detJ<<endl;  
+            cout << Ke(1,0)/detJ<< ";" <<   Ke(1,1)/detJ<< ";" <<Ke(1,2)/detJ<<endl; 
+            cout << Ke(2,0)/detJ<< ";" <<   Ke(2,1)/detJ<< ";" <<Ke(2,2)/detJ<<endl;  
+            */
           
 
             /*Utilisation du mapping NodesCorresp.
@@ -438,15 +429,15 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             int num3 = NodesCorresp[n3]->num-1;
 
 
-            Tmp(num1, n1->num-1) += (Ke_1(0,0) + Ke(0,0));
-            Tmp(num1, n2->num-1) += (Ke_1(0,1) + Ke(0,1));
-            Tmp(num1, n3->num-1) += (Ke_1(0,2) + Ke(0,2));
-            Tmp(num2, n1->num-1) += (Ke_1(1,0) + Ke(1,0));
-            Tmp(num2, n2->num-1) += (Ke_1(1,1) + Ke(1,1));
-            Tmp(num2, n3->num-1) += (Ke_1(1,2) + Ke(1,2));
-            Tmp(num3, n1->num-1) += (Ke_1(2,0) + Ke(2,0));
-            Tmp(num3, n2->num-1) += (Ke_1(2,1) + Ke(2,1));
-            Tmp(num3, n3->num-1) += (Ke_1(2,2) + Ke(2,2));
+            Tmp(num1, n1->num-1) += (Ke_1(0,0) + Ke_2(0,0));
+            Tmp(num1, n2->num-1) += (Ke_1(0,1) + Ke_2(0,1));
+            Tmp(num1, n3->num-1) += (Ke_1(0,2) + Ke_2(0,2));
+            Tmp(num2, n1->num-1) += (Ke_1(1,0) + Ke_2(1,0));
+            Tmp(num2, n2->num-1) += (Ke_1(1,1) + Ke_2(1,1));
+            Tmp(num2, n3->num-1) += (Ke_1(1,2) + Ke_2(1,2));
+            Tmp(num3, n1->num-1) += (Ke_1(2,0) + Ke_2(2,0));
+            Tmp(num3, n2->num-1) += (Ke_1(2,1) + Ke_2(2,1));
+            Tmp(num3, n3->num-1) += (Ke_1(2,2) + Ke_2(2,2));
 
             gmm::clear(Ke_1);
             gmm::clear(Ke_2);
@@ -460,9 +451,10 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
 
 bool End_Criterion(std::vector<double> &theta_k, std::vector<double> &delta_theta_k)
 {
-    double eps = 1e-4;
+    double eps = 1;
     for (unsigned int i=0; i<theta_k.size();i++)
     {
+        cout<<"Error  = "<<abs(delta_theta_k[i]/theta_k[i])<<endl;
         if(abs(delta_theta_k[i]/theta_k[i]) > eps)
             return false;
     }

@@ -304,7 +304,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 					if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
 					{
 						theta_k[elements[l]->nodes[j]->num-1] = linesRegion[elements[l]->region];
-						cout << "LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
+						//cout << "LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
 						flag_theta[elements[l]->nodes[j]->num-1]= flag;
 					}
                 }
@@ -317,7 +317,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 				if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
 				{
 					theta_k[elements[l]->nodes[j]->num-1] = rand() % 200 + 50; //Arbitrary value in order not to have a zero vector
-					cout << "NO LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
+					//cout << "NO LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
 					flag_theta[elements[l]->nodes[j]->num-1]= flag;
 				}
             }
@@ -326,6 +326,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
     //cout << "In FEM.cpp before loop." << endl;
     bool Criterion = false;
+    int iter = 1; 
 
     while(Criterion == false)
     {
@@ -334,6 +335,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 					f,method,linesRegion, NodesCorresp,delta_theta_k,surfaceRegion);
 
         Criterion = End_Criterion(theta_k, delta_theta_k);
+        cout<<"Iteration number "<<iter<<endl;
+        iter++;
     }
 
 
