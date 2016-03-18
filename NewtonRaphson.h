@@ -9,7 +9,7 @@
 void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters,
 					std::map<Node*, std::vector<double> > &solution, std::vector<double> &theta_k,gmm::row_matrix< gmm::wsvector<double> > Tmp,
 					std::vector<double> &qext,FemFlag method,std::map<int, double> linesRegion, std::map<Node*, Node*> &NodesCorresp,
-					std::vector<double> &delta_theta_k,std::map<int, std::vector<double> > &surfaceRegion);
+					std::vector<double> &delta_theta_k,std::map<int, std::vector<double> > &surfaceRegion,std::vector<double> &RHS);
 
 void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double> > &surfaceRegion, std::vector<Element*> &elements, std::vector<double> &qint);
 
@@ -17,5 +17,5 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                               std::vector<Element*> &elements, gmm::row_matrix< gmm::wsvector<double> >&KT,
                               std::map<Node*, Node*> &NodesCorresp,std::vector<Node*> &nodes);
 
-bool End_Criterion(std::vector<double> &theta_k, std::vector<double> &delta_theta_k);
+bool End_Criterion(std::vector<double> &RHS,double normRHS0);
 #endif // NEWTON_RAPHSON_H

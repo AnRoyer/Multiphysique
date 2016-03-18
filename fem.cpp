@@ -5,15 +5,14 @@
 #include <string>
 #include "gmm/gmm.h"
 #include "fem.h"
-#include "NewtonRaphson_v1.h"
+#include "NewtonRaphson.h"
 
 using namespace std;
 
 using namespace std;
 
-/*
-Code de calcul FEM
-*/
+/*---------------------------------------------------Code de calcul FEM-------------------------------------------------------*/
+
 
 //type = 0 : thermique, type = 1 = électrique
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solution, FemFlag type, FemFlag method, Periodique &conditions)
@@ -205,98 +204,25 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
 
 
-    //K matrix
-    gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());
-    /*
-    for(unsigned int i = 0; i < elements.size(); i++)
-    {
-        if(elements[i]->type == 2)//If triangle
-        {
-            Node *n1 = elements[i]->nodes[0];
-            Node *n2 = elements[i]->nodes[1];
-            Node *n3 = elements[i]->nodes[2];
-            double x1 = n1->x;
-            double y1 = n1->y;
-            double x2 = n2->x;
-            double y2 = n2->y;
-            double x3 = n3->x;
-            double y3 = n3->y;
-            double theta1 = 1; // Temperature au noeud 1
-            double theta2 = 1; // Temperature au noeud 2
-            double theta3 = 1; // Temperature au noeud 3
-            double thetak = 0;
-            // double cons = surfaceRegion[elements[i]->region][0];// alpha
-
-            gmm::dense_matrix<double> Ke(3,3); // Second terme avec la conductivité sous forme matricielle
-            gmm::dense_matrix<double> KTe(3,1); // Le nouveau terme ne dépend pas de J, on le prend comme un vecteur qu'on calculera à part
-            gmm::dense_matrix<double> alpha(2,2); // matrice alpha
-
-            alpha(0,0) = surfaceRegion[elements[i]->region][1];
-            alpha(0,1) = surfaceRegion[elements[i]->region][2];
-            alpha(1,0) = surfaceRegion[elements[i]->region][3];
-            alpha(1,1) = surfaceRegion[elements[i]->region][4];
-
-            gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
-
-            beta(0,0) = surfaceRegion[elements[i]->region][5];
-            beta(0,1) = surfaceRegion[elements[i]->region][6];
-            beta(1,0) = surfaceRegion[elements[i]->region][7];
-            beta(1,1) = surfaceRegion[elements[i]->region][8];
-
-            double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
-
-            KTe(0,0) = ((theta2 - theta1)*(alpha(0,0)*(y3-y2)*(y3-y1) + alpha(1,1)*(x2-x3)*(x1-x3) + alpha(0,1)*((x2-x3)*(y3-y1) + (y3-y2)*(x1-x3))) + (theta3-theta1)*(alpha(0,0)*(y3-y2)*(y1-y2) + alpha(1,1)*(x2-x3)*(x2-x1) + alpha(1,0)*((x2-x3)*(y1-y2) + (x2-x1)*(y3-y2))))/6;
-            KTe(1,0) = (- (theta2 - theta1)*(alpha(0,0)*(y3-y1)*(y3-y1) + alpha(1,1)*(x1-x3)*(x1-x3) + 2*alpha(0,1)*(x1-x3)*(y3-y1)) - (theta3-theta1)*(alpha(0,0)*(y3-y1)*(y1-y2) + alpha(1,1)*(x1-x3)*(x2-x1) + alpha(1,0)*((x1-x3)*(y1-y2) + (x2-x1)*(y3-y1))))/6;
-            KTe(2,0) = (- (theta2 - theta1)*(alpha(0,0)*(y3-y1)*(y1-y2) + alpha(1,1)*(x2-x1)*(x1-x3) + alpha(0,1)*((x1-x3)*(y1-y2) + (y3-y1)*(x2-x1))) - (theta3-theta1)*(alpha(0,0)*(y1-y2)*(y1-y2) + alpha(1,1)*(x2-x1)*(x2-x1) + 2*alpha(1,0)*(x2-x1)*(y1-y2)))/6;
 
 
-            Ke(0,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y3-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x2-x3) + 2*(alpha(1,0)*thetak + beta(1,0))*(y3-y2)*(x2-x3))/2;
-            Ke(1,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y3-y1) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x1-x3) + (alpha(1,0)*thetak + beta(1,0))*((y3-y2)*(x1-x3) + (x2-x3)*(y3-y1)))/2;
-            Ke(2,0) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x3)*(x2-x1) + (alpha(1,0)*thetak + beta(1,0))*((y3-y2)*(x2-x1) + (x2-x3)*(y1-y2)))/2;
-            Ke(0,1) = Ke(1,0);
-            Ke(1,1) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y1)*(y3-y1) + (alpha(1,1)*thetak + beta(1,1))*(x1-x3)*(x1-x3) + 2*(alpha(1,0)*thetak + beta(1,0))*(y3-y1)*(x1-x3))/2;
-            Ke(2,1) = ((alpha(0,0)*thetak + beta(0,0))*(y3-y1)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x1-x3)*(x2-x1) + (alpha(1,0)*thetak + beta(1,0))*((y3-y1)*(x2-x1) + (x1-x3)*(y1-y2)))/2;
-            Ke(0,2) = Ke(2,0);
-            Ke(1,2) = Ke(2,1);
-            Ke(2,2) = ((alpha(0,0)*thetak + beta(0,0))*(y1-y2)*(y1-y2) + (alpha(1,1)*thetak + beta(1,1))*(x2-x1)*(x2-x1) + 2*(alpha(1,0)*thetak + beta(1,0))*(y1-y2)*(x2-x1))/2;
-
-
-            //Utilisation du mapping NodesCorresp.
-            //Si une valeur doit être ajoutée à la ligne d'un noeud de droite, celle-ci est directement ajoutée à la ligne correspondant au noeud de gauche en vis-a-vis
-            int num1 = NodesCorresp[n1]->num-1;
-            int num2 = NodesCorresp[n2]->num-1;
-            int num3 = NodesCorresp[n3]->num-1;
-
-            Tmp(num1, n1->num-1) += (Ke(0,0) + KTe(0,0))/J;
-            Tmp(num1, n2->num-1) += (Ke(0,1) + KTe(0,0))/J;
-            Tmp(num1, n3->num-1) += (Ke(0,2) + KTe(0,0))/J;
-            Tmp(num2, n1->num-1) += (Ke(1,0) + KTe(1,0))/J;
-            Tmp(num2, n2->num-1) += (Ke(1,1) + KTe(1,0))/J;
-            Tmp(num2, n3->num-1) += (Ke(1,2) + KTe(1,0))/J;
-            Tmp(num3, n1->num-1) += (Ke(2,0) + KTe(2,0))/J;
-            Tmp(num3, n2->num-1) += (Ke(2,1) + KTe(2,0))/J;
-            Tmp(num3, n3->num-1) += (Ke(2,2) + KTe(2,0))/J;
-        }
-    }
-    */
-	//cout << "In FEM.cpp before theta_k." << endl;
     //f vector
     vector<double> f(nodes.size());
     f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
 
-    std::vector<double> theta_k(nodes.size());
+    //Theta_K and delta_theta_k vector
+    std::vector<double> theta_k(nodes.size(),0);
     std::vector<double> delta_theta_k(nodes.size());
-    //Including the Dirichlet condition on theta_0
 
+
+    //Including the Dirichlet condition on theta_k
 	std::vector<double> flag_theta(nodes.size()); //Vector aimed at keeping in mind the allocation
 	double flag = 145;
 
     for(unsigned int l = 0; l < elements.size(); l++)
     {
-        //cout << "In FEM.cpp theta_k edition." << endl;
         if(elements[l]->type == 1)//If line
         {
-            //cout << "We have a line." << endl;
             if(linesRegion.count(elements[l]->region) == 1)//If linesRegion contains elements[i]->region
             {
                 for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
@@ -304,92 +230,46 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 					if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
 					{
 						theta_k[elements[l]->nodes[j]->num-1] = linesRegion[elements[l]->region];
-						//cout << "LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
 						flag_theta[elements[l]->nodes[j]->num-1]= flag;
 					}
                 }
             }
         }
-        else
-        {
-            for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
-            {
-				if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
-				{
-					theta_k[elements[l]->nodes[j]->num-1] = rand() % 200 + 50; //Arbitrary value in order not to have a zero vector
-					//cout << "NO LINE : theta_k["<<elements[l]->nodes[j]->num-1<<"] has been set at  "<< theta_k[elements[l]->nodes[j]->num-1] << endl;
-					flag_theta[elements[l]->nodes[j]->num-1]= flag;
-				}
-            }
-        }
+
     }
 
-    //cout << "In FEM.cpp before loop." << endl;
-    bool Criterion = false;
-    int iter = 1; 
+    
+    gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());//Matrix used in building KT
+    std::vector<double> RHS(nodes.size());//Right Hand Side in Newton Raphson algorithm
 
+    bool Criterion = false;
+    int iter = 1; //counter of the number of iterations
+    double normRHS0;//norm of initial RHS
+
+    //Loop as long as criterion is not respected
     while(Criterion == false)
     {
+        //Newton Raphson routine
         NewtonRaphson(nodes, elements, physicals, parameters,
 					solution, theta_k,Tmp,
-					f,method,linesRegion, NodesCorresp,delta_theta_k,surfaceRegion);
+					f,method,linesRegion, NodesCorresp,delta_theta_k,surfaceRegion,RHS);
+        //Initialize value for normRHS0
+        if(iter==1)
+            normRHS0 = gmm::vect_norm2(RHS); 
 
-        Criterion = End_Criterion(theta_k, delta_theta_k);
+        //Check the convergence criterion
+        Criterion = End_Criterion(RHS,normRHS0);
         cout<<"Iteration number "<<iter<<endl;
         iter++;
     }
 
 
 
-
     /*
-    //Dirichlet sur K
-    if(method == DIRICHLETFLAG)
-    {
-        for(unsigned int i = 0; i < elements.size(); i++)
-        {
-            if(elements[i]->type == 1)//If line
-            {
-                if(linesRegion.count(elements[i]->region) == 1)//If linesRegion contains elements[i]->region
-                {
-                    for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
-                    {
-                        for(unsigned int k = 0; k < nodes.size(); k++)
-                        {
-                            if(k == elements[i]->nodes[j]->num-1)
-                            {
-                                Tmp(elements[i]->nodes[j]->num-1, k) = 1;
-                            }
-                            else
-                            {
-                                Tmp(elements[i]->nodes[j]->num-1, k) = 0;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        //Dirichlet sur f
-
-        for(unsigned int i = 0; i < elements.size(); i++)
-        {
-            if(elements[i]->type == 1)//If line
-            {
-                if(linesRegion.count(elements[i]->region) == 1)//If linesRegion contains elements[i]->region
-                {
-                    for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
-                    {
-                        f[elements[i]->nodes[j]->num-1] = linesRegion[elements[i]->region];
-                    }
-                }
-            }
-        }
-    }
-    */
 
 
-    /* POUR L'instant pas de conditions periodiques
+     A UTILISER POUR L'INCLUSION DES CONDITIONS PERIODIQUES
+
     //Conditions periodiques sur K et f.
     double lx = abs(C2->x - C1->x);
     double ly = abs(C4->y - C1->y);
@@ -502,13 +382,6 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
     */
 
-    /*
-    //System
-    vector<double> x(nodes.size());
-    gmm::csr_matrix<double> K;
-    gmm::copy(Tmp,K);
-    gmm::lu_solve(K, x, f);
-    */
 
     //Solution (écriture)
     for(unsigned int i = 0; i < nodes.size(); i++)
@@ -516,7 +389,9 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         std::vector<double> val(1, theta_k[i]);
         solution[nodes[i]] = val;
     }
-}
+}//end of FEM routine
+
+
 
 /* fonction permettant de calculer le vecteur f ainsi que la condition periodique sur le noeud 1 (condition sur la temperature moyenne)*/
 void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,std::vector<double> > &surfaceRegion, int constantProperty)
