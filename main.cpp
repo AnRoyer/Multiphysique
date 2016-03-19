@@ -25,8 +25,8 @@ int main(int argc, char **argv)
 
     //Affichage des infos principales
     cout << "Read " << nodes.size() << " nodes and " << elements.size() << " elements" << endl << endl;
-    map<Node*, vector<double> > solutionT;
-    map<Node*, vector<double> > solutionE;
+    map<Node*, vector<double> > solutionTemperature;
+    map<Node*, vector<double> > solutionFlux;
 
 
     vector<Parameter*> parameters;
@@ -74,14 +74,15 @@ int main(int argc, char **argv)
 
     if(conditions.exist == true)
     {
-        fem(nodes, elements, physicals, parameters, solutionT, THERMALFLAG, PERIODICFLAG, conditions);
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions);
     }
     else
     {
-        fem(nodes, elements, physicals, parameters, solutionT, THERMALFLAG, DIRICHLETFLAG, conditions);
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions);
     }
 
-    writeMSH((char*)"solT.pos", 0, 1, solutionT);
+    writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
+    writeMSH((char*)"solutionFlux.pos", solutionFlux);
 
     /*FILE *fp = fopen("dataMatlabT.dat", "w");
 

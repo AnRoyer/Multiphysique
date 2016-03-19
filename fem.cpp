@@ -15,7 +15,7 @@ using namespace std;
 
 
 //type = 0 : thermique, type = 1 = électrique
-void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solution, FemFlag type, FemFlag method, Periodique &conditions)
+void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux, FemFlag type, FemFlag method, Periodique &conditions)
 {
    // cout << "In FEM.cpp " << endl;
     //Boundaries
@@ -142,7 +142,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
     //f vector
     vector<double> f(nodes.size());
-    f_function(f,nodes,elements,region,type); //dernier paramètre de la fonction f nul =>
+    f_function(f, nodes, elements, region, type, 0); //dernier paramètre de la fonction f nul =>
 
     //Theta_K and delta_theta_k vector
     std::vector<double> theta_k(nodes.size(),0);
@@ -176,9 +176,9 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
     }
 
-
-    gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());//Matrix used in building KT
     std::vector<double> RHS(nodes.size());//Right Hand Side in Newton Raphson algorithm
+    std::vector<double> q_m_x(nodes.size());
+    std::vector<double> q_m_y(nodes.size());
 
     bool Criterion = false;
     int iter = 1; //counter of the number of iterations
@@ -188,9 +188,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     while(Criterion == false)
     {
         //Newton Raphson routine
-        NewtonRaphson(nodes, elements, physicals, parameters,
-					solution, theta_k,Tmp,
-					f,method, NodesCorresp,delta_theta_k, region,RHS);
+        NewtonRaphson(nodes, elements, physicals, theta_k, f, method, NodesCorresp, delta_theta_k, region, RHS);
         //Initialize value for normRHS0
         if(iter==1)
             normRHS0 = gmm::vect_norm2(RHS);
@@ -200,6 +198,9 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         cout<<"Iteration number "<<iter<<endl;
         iter++;
     }
+
+    Internal_flux(theta_k, region, elements, f, q_m_x, q_m_y);
+
 
 
 
@@ -325,42 +326,54 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     for(unsigned int i = 0; i < nodes.size(); i++)
     {
         std::vector<double> val(1, theta_k[i]);
-        solution[nodes[i]] = val;
+        solutionTemperature[nodes[i]] = val;
+        std::vector<double> val2(3);
+        val2[0] = q_m_x[i];
+        val2[1] = q_m_y[i];
+        val2[2] = 0;
+        solutionFlux[nodes[i]] = val2;
     }
 }//end of FEM routine
 
 
 
 /* fonction permettant de calculer le vecteur f ainsi que la condition periodique sur le noeud 1 (condition sur la temperature moyenne)*/
-void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,Parameter*> &region, FemFlag type)
+void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,Parameter*> &region, FemFlag type, int constantProperty)
 {
     double cons;
     for(unsigned int i = 0; i < elements.size(); i++)
     {
         if(elements[i]->type == 2)//If triangle
         {
-            if(type == THERMALFLAG)
+            if(constantProperty != 0)
             {
-                cons = region[elements[i]->region]->thermalGeneration;
+                cons = constantProperty;
             }
-            else if(type == ELECTRICFLAG)
+            else
             {
-                cons = region[elements[i]->region]->electricalGeneration;
-            }
-            Node *n1 = elements[i]->nodes[0];
-            Node *n2 = elements[i]->nodes[1];
-            Node *n3 = elements[i]->nodes[2];
-            double x1 = n1->x;
-            double y1 = n1->y;
-            double x2 = n2->x;
-            double y2 = n2->y;
-            double x3 = n3->x;
-            double y3 = n3->y;
-            double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
+                if(type == THERMALFLAG)
+                {
+                    cons = region[elements[i]->region]->thermalGeneration;
+                }
+                else if(type == ELECTRICFLAG)
+                {
+                    cons = region[elements[i]->region]->electricalGeneration;
+                }
+                Node *n1 = elements[i]->nodes[0];
+                Node *n2 = elements[i]->nodes[1];
+                Node *n3 = elements[i]->nodes[2];
+                double x1 = n1->x;
+                double y1 = n1->y;
+                double x2 = n2->x;
+                double y2 = n2->y;
+                double x3 = n3->x;
+                double y3 = n3->y;
+                double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
 
-            f[n1->num-1] += cons*J/6;
-            f[n2->num-1] += cons*J/6;
-            f[n3->num-1] += cons*J/6;
+                f[n1->num-1] += cons*J/6;
+                f[n2->num-1] += cons*J/6;
+                f[n3->num-1] += cons*J/6;
+            }
         }
     }
 }

@@ -24,6 +24,6 @@ struct Physical
 };
 
 void readMSH(const char *fileName, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals);
-void writeMSH(char *fileName, double time, int step, std::map<Node*, std::vector<double> > &solution);
+void writeMSH(char *fileName, std::map<Node*, std::vector<double> > &solution);
 
 #endif // GMSHIO_H_INCLUDED

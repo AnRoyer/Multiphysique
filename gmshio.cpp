@@ -239,7 +239,7 @@ void readMSH(const char *fileName, std::vector<Node*> &nodes, std::vector<Elemen
     fclose(fp);
 }
 
-void writeMSH(char *fileName, double time, int step, std::map<Node*, std::vector<double> > &solution)
+void writeMSH(char *fileName, std::map<Node*, std::vector<double> > &solution)
 {
     FILE *fp = fopen(fileName, "w");
     if(!fp)
@@ -262,11 +262,11 @@ void writeMSH(char *fileName, double time, int step, std::map<Node*, std::vector
     fprintf(fp, "$MeshFormat\n2.2 0 8\n$EndMeshFormat\n");
     fprintf(fp, "$NodeData\n");
     fprintf(fp, "%d\n", 1);
-    fprintf(fp, "\"my solution\"\n");
+    fprintf(fp, "\"%s\"\n", fileName);
     fprintf(fp, "%d\n", 1);
-    fprintf(fp, "%g\n", time);
+    fprintf(fp, "%g\n", 1.0);
     fprintf(fp, "%d\n", 3);
-    fprintf(fp, "%d\n", step);
+    fprintf(fp, "%d\n", 0);
     fprintf(fp, "%d\n", nbComp);
     fprintf(fp, "%lu\n", (unsigned long)solution.size());
 

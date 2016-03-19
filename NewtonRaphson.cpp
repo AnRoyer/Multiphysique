@@ -13,18 +13,18 @@ using namespace std;
 
 /*---------------------------------------------NEWTON RAPHSON ROUTINE--------------------------------------------------------------*/
 
-void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters,
-					std::map<Node*, std::vector<double> > &solution, std::vector<double> &theta_k,gmm::row_matrix< gmm::wsvector<double> > Tmp,
+void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<double> &theta_k,
 					std::vector<double> &qext,FemFlag method, std::map<Node*, Node*> &NodesCorresp,
 					std::vector<double> &delta_theta_k, std::map<int,Parameter*> &region, std::vector<double> &RHS)
 {
-
-	std::vector<double> qint(nodes.size()); //Internal flux vector
+    std::vector<double> qint(nodes.size()); //Internal flux vector
 	gmm::row_matrix< gmm::wsvector<double> > KT_tmp(nodes.size(), nodes.size());//Tangent matrix used for build-in
     gmm::csr_matrix<double> KT;//Tangent matrix used in system solving
 
     //Internal Flux : qint
-	Internal_flux(theta_k, region, elements, qint);
+    std::vector<double> q_m_x(0); //Internal flux vector
+    std::vector<double> q_m_y(0); //Internal flux vector
+	Internal_flux(theta_k, region, elements, qint, q_m_x, q_m_y);
 
     //TANGENT STIFFNESS MATRIX :  KT
     Tangent_Stiffness_Matrix(theta_k, region, elements, KT_tmp, NodesCorresp, nodes);
@@ -93,7 +93,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
 
 /*----------------------------------------------------------INTERNAL FLUX ROUTINE----------------------------------------------------------------------*/
-void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &region, std::vector<Element*> &elements, std::vector<double> &qint)
+void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &region, std::vector<Element*> &elements, std::vector<double> &qint, std::vector<double> &q_m_x, std::vector<double> &q_m_y)
 {
     gmm::dense_matrix<double> alpha(2,2); // matrice alpha
     gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
@@ -188,29 +188,40 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &regio
             std::vector<double> tmp_vec_2(2,0);//Temporary vector in the computation of qint
 
 
-            	for(unsigned int j = 0; j<3 ; j++)
-            	{
-            		tmp_vec[0] += theta_nodes[j]*grad_phi(0,j);
-            		tmp_vec[1] += theta_nodes[j]*grad_phi(1,j);
-            	}
+            for(unsigned int j = 0; j<3 ; j++)
+            {
+                tmp_vec[0] += theta_nodes[j]*grad_phi(0,j);
+                tmp_vec[1] += theta_nodes[j]*grad_phi(1,j);
+            }
 
-            	for(unsigned int j = 0; j<2; j++)
+            for(unsigned int j = 0; j<2; j++)
+            {
+                for(unsigned int k = 0; k<2 ; k++)
                 {
-            		for(unsigned int k = 0; k<2 ; k++)
-            		{
-            			tmp_vec_2[j] += inv_J(j,k)*tmp_vec[k];
-            		}
-            	}
+                    tmp_vec_2[j] += inv_J(j,k)*tmp_vec[k];
+                }
+            }
 
-                tmp_vec[0]=0;
-                tmp_vec[1]=0;
-            	for(unsigned int j = 0; j<2; j++)
+            tmp_vec[0]=0;
+            tmp_vec[1]=0;
+            for(unsigned int j = 0; j<2; j++)
+            {
+                for(unsigned int k = 0; k<2 ; k++)
                 {
-            		for(unsigned int k = 0; k<2 ; k++)
-            		{
-            			tmp_vec[j]+= kappa(j,k)*tmp_vec_2[k];
-            		}
-            	}
+                    tmp_vec[j]+= kappa(j,k)*tmp_vec_2[k];
+                }
+            }
+
+            if(q_m_x.size() != 0 && q_m_y.size() != 0)
+            {
+                q_m_x[n1->num-1] += tmp_vec[0];
+                q_m_x[n2->num-1] += tmp_vec[0];
+                q_m_x[n3->num-1] += tmp_vec[0];
+
+                q_m_y[n1->num-1] += tmp_vec[1];
+                q_m_y[n2->num-1] += tmp_vec[1];
+                q_m_y[n3->num-1] += tmp_vec[1];
+            }
 
 
             for(unsigned int l = 0; l<3 ; l++)//For each element, there are three contributions to qint at distinct nodes
@@ -450,7 +461,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
 bool End_Criterion(std::vector<double> &RHS,double normRHS0)
 {
     //Threshold value
-    double eps = 1e-15;
+    double eps = 1e-10;
 
     cout << "Relative residue = "<<gmm::vect_norm2(RHS)/normRHS0<<endl;
     if(gmm::vect_norm2(RHS)/normRHS0 >eps)
