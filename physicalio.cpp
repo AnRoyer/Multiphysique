@@ -235,8 +235,6 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                                 Conductivity* newCond = new Conductivity;
                                 newCond->name = nameParam.value;
 
-                                cout << nameParam.value << endl;
-
                                 newCond->conductivity[0][0] = readValue(fp);
                                 newCond->conductivity[0][1] = readValue(fp);
                                 newCond->conductivity[1][0] = readValue(fp);

@@ -15,8 +15,8 @@ using namespace std;
 
 void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters,
 					std::map<Node*, std::vector<double> > &solution, std::vector<double> &theta_k,gmm::row_matrix< gmm::wsvector<double> > Tmp,
-					std::vector<double> &qext,FemFlag method,std::map<int, double> linesRegion, std::map<Node*, Node*> &NodesCorresp,
-					std::vector<double> &delta_theta_k,std::map<int, std::vector<double> > &surfaceRegion,std::vector<double> &RHS)
+					std::vector<double> &qext,FemFlag method, std::map<Node*, Node*> &NodesCorresp,
+					std::vector<double> &delta_theta_k, std::map<int,Parameter*> &region, std::vector<double> &RHS)
 {
 
 	std::vector<double> qint(nodes.size()); //Internal flux vector
@@ -24,13 +24,12 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     gmm::csr_matrix<double> KT;//Tangent matrix used in system solving
 
     //Internal Flux : qint
-	Internal_flux(theta_k, surfaceRegion, elements, qint);
+	Internal_flux(theta_k, region, elements, qint);
 
-    //TANGENT STIFFNESS MATRIX :  KT 
-    Tangent_Stiffness_Matrix(theta_k,surfaceRegion,elements,
-                             KT_tmp,NodesCorresp,nodes);
-							 
-    //Building of the Right Hand Side                      
+    //TANGENT STIFFNESS MATRIX :  KT
+    Tangent_Stiffness_Matrix(theta_k, region, elements, KT_tmp, NodesCorresp, nodes);
+
+    //Building of the Right Hand Side
     for (unsigned int i=0 ; i<nodes.size(); i++)
         RHS[i] = qint[i]+qext[i];
 
@@ -42,7 +41,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
         {
             if(elements[i]->type == 1)//If line
             {
-                if(linesRegion.count(elements[i]->region) == 1)//If linesRegion contains elements[i]->region
+                if(region.count(elements[i]->region) == 1 && region[elements[i]->region]->temperature != -1)//If linesRegion contains elements[i]->region
                 {
                     for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
                     {
@@ -67,7 +66,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
         {
             if(elements[i]->type == 1)//If line
             {
-                if(linesRegion.count(elements[i]->region) == 1)//If linesRegion contains elements[i]->region
+                if(region.count(elements[i]->region) == 1 && region[elements[i]->region]->temperature != -1)//If linesRegion contains elements[i]->region
                 {
                     for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
                     {
@@ -88,13 +87,13 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 	{
 		theta_k[i]+=delta_theta_k[i];
 	}
-       
-	
+
+
 }//end of Newton Raphson
 
 
 /*----------------------------------------------------------INTERNAL FLUX ROUTINE----------------------------------------------------------------------*/
-void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double> > &surfaceRegion, std::vector<Element*> &elements, std::vector<double> &qint)
+void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &region, std::vector<Element*> &elements, std::vector<double> &qint)
 {
     gmm::dense_matrix<double> alpha(2,2); // matrice alpha
     gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
@@ -116,15 +115,35 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
             double y3 = n3->y;
             double qint_I; //Contribution of a given node to qint
 
-            alpha(0,0) = surfaceRegion[elements[i]->region][1];
-            alpha(0,1) = surfaceRegion[elements[i]->region][2];
-            alpha(1,0) = surfaceRegion[elements[i]->region][3];
-            alpha(1,1) = surfaceRegion[elements[i]->region][4];
+            if(region[elements[i]->region]->thermalConductivity[0]->name == "alpha")
+            {
+                alpha(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+                alpha(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+                alpha(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+                alpha(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+            }
+            else if(region[elements[i]->region]->thermalConductivity[1]->name == "alpha")
+            {
+                alpha(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+                alpha(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+                alpha(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+                alpha(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+            }
 
-            beta(0,0) = surfaceRegion[elements[i]->region][5];
-            beta(0,1) = surfaceRegion[elements[i]->region][6];
-            beta(1,0) = surfaceRegion[elements[i]->region][7];
-            beta(1,1) = surfaceRegion[elements[i]->region][8];
+            if(region[elements[i]->region]->thermalConductivity[0]->name == "beta")
+            {
+                beta(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+                beta(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+                beta(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+                beta(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+            }
+            else if(region[elements[i]->region]->thermalConductivity[1]->name == "beta")
+            {
+                beta(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+                beta(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+                beta(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+                beta(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+            }
 
             std::vector<double> theta_nodes(3);//Temperature at nodes
             theta_nodes[0] = theta_k[n1->num-1];
@@ -147,7 +166,7 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
 
 
             //Inverse of the Jacobian Matrix
-            gmm::dense_matrix<double> inv_J(2,2); 
+            gmm::dense_matrix<double> inv_J(2,2);
             inv_J(0,0) = 1/detJ*(y3-y1);
             inv_J(0,1) = 1/detJ*(y1-y2);
             inv_J(1,0) = 1/detJ*(x1-x3);
@@ -195,7 +214,7 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
 
 
             for(unsigned int l = 0; l<3 ; l++)//For each element, there are three contributions to qint at distinct nodes
-            {   
+            {
                 tmp_vec_2[0]=0;
                 tmp_vec_2[1]=0;
                 //cout << "LOOP 3 : l = "<< l << endl;
@@ -231,8 +250,8 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,std::vector<double
 
 
 /*------------------------------------------------------TANGENT STIFFNESS MATRIX ROUTINE---------------------------------------------------*/
-void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vector<double> > &surfaceRegion, std::vector<Element*> &elements, 
-                                gmm::row_matrix< gmm::wsvector<double> > &KT,map<Node*, Node*> &NodesCorresp,std::vector<Node*> &nodes)
+void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parameter*> &region, std::vector<Element*> &elements,
+                                gmm::row_matrix< gmm::wsvector<double> > &KT, map<Node*, Node*> &NodesCorresp, std::vector<Node*> &nodes)
 {
 
     gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());//Temporaray matrix in the building of KT
@@ -256,17 +275,35 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             double y3 = n3->y;
 
 
-            //alpha tensor
-            alpha(0,0) = surfaceRegion[elements[i]->region][1];
-            alpha(0,1) = surfaceRegion[elements[i]->region][2];
-            alpha(1,0) = surfaceRegion[elements[i]->region][3];
-            alpha(1,1) = surfaceRegion[elements[i]->region][4];
+            if(region[elements[i]->region]->thermalConductivity[0]->name == "alpha")
+            {
+                alpha(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+                alpha(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+                alpha(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+                alpha(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+            }
+            else if(region[elements[i]->region]->thermalConductivity[1]->name == "alpha")
+            {
+                alpha(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+                alpha(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+                alpha(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+                alpha(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+            }
 
-            //beta tensor
-            beta(0,0) = surfaceRegion[elements[i]->region][5];
-            beta(0,1) = surfaceRegion[elements[i]->region][6];
-            beta(1,0) = surfaceRegion[elements[i]->region][7];
-            beta(1,1) = surfaceRegion[elements[i]->region][8];
+            if(region[elements[i]->region]->thermalConductivity[0]->name == "beta")
+            {
+                beta(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+                beta(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+                beta(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+                beta(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+            }
+            else if(region[elements[i]->region]->thermalConductivity[1]->name == "beta")
+            {
+                beta(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+                beta(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+                beta(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+                beta(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+            }
 
             std::vector<double> theta_nodes(3);//Temperature at nodes
             theta_nodes[0] = theta_k[n1->num-1];
@@ -277,7 +314,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
 
 
             //Assembly of the conductivity tensor on the element
-            gmm::dense_matrix<double> kappa(2,2); 
+            gmm::dense_matrix<double> kappa(2,2);
 
             for (unsigned int k = 0; k<2;k++)
             {
@@ -288,7 +325,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             }
 
             //Inverse of the Jacobian Matrix
-            gmm::dense_matrix<double> inv_J(2,2); 
+            gmm::dense_matrix<double> inv_J(2,2);
             inv_J(0,0) = 1/detJ*(y3-y1);
             inv_J(0,1) = 1/detJ*(y1-y2);
             inv_J(1,0) = 1/detJ*(x1-x3);
@@ -303,7 +340,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
             grad_phi(0,2) = 0;
             grad_phi(1,2) = 1;
 
-            
+
 
 
             std::vector<double> tmp_vec(2,0);//Temporary vector in the computation of Matrix KT
@@ -325,8 +362,8 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                     tmp_vec_2[j] += inv_J(j,k)*tmp_vec[k];
                 }
             }
-            
-             
+
+
             for(unsigned int j = 0; j<3; j++)//one contribution per shape function
             {
                 tmp_vec[0]=0;
@@ -342,9 +379,9 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                 {
                     for(unsigned int l = 0 ; l<2; l++)
                     {
-                        Ke_1(j,0) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
-                        Ke_1(j,1) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
-                        Ke_1(j,2) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l]; 
+                        Ke_1(j,0) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l];
+                        Ke_1(j,1) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l];
+                        Ke_1(j,2) += detJ/6*alpha(k,l)*tmp_vec[k]*tmp_vec_2[l];
                     }
                 }
             }
@@ -364,7 +401,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                         tmp_mat(k,j) += inv_J(k,l)*grad_phi(l,j);
                     }
                 }
-            }   
+            }
 
             //gmm::mult(inv_J,grad_phi,tmp_mat)  ;
              for(unsigned int j = 0; j<3; j++)//one contribution per shape function
@@ -375,13 +412,13 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
                     {
                         for(unsigned int m = 0; m<2 ; m++)
                         {
-                            Ke_2(j,k) += detJ/2*kappa(l,m)*tmp_mat(m,j)*tmp_mat(l,k); 
+                            Ke_2(j,k) += detJ/2*kappa(l,m)*tmp_mat(m,j)*tmp_mat(l,k);
                         }
                     }
                 }
-            } 
+            }
 
-          
+
             /*Utilisation du mapping NodesCorresp.
             Si une valeur doit être ajoutée à la ligne d'un noeud de droite, celle-ci est directement ajoutée à la ligne correspondant au noeud de gauche en vis-a-vis*/
             int num1 = NodesCorresp[n1]->num-1;
@@ -413,11 +450,11 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k,std::map<int,std::vec
 bool End_Criterion(std::vector<double> &RHS,double normRHS0)
 {
     //Threshold value
-    double eps = 1e-4;
-    
+    double eps = 1e-15;
+
     cout << "Relative residue = "<<gmm::vect_norm2(RHS)/normRHS0<<endl;
     if(gmm::vect_norm2(RHS)/normRHS0 >eps)
-        return false; 
+        return false;
 
     return true;
 }

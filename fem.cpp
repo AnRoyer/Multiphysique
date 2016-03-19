@@ -19,90 +19,24 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 {
    // cout << "In FEM.cpp " << endl;
     //Boundaries
-    map<int, double> linesRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
-    map<int, std::vector<double> > surfaceRegion;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 2 (surface)
+    map<int, Parameter*> region;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
 
     /*Chargement des paramètres de la struc Parameter contenant les paramètres d'entrées.
     A chaque éléments de physicals, on lui associe l'élément de "parameters" correspondant. La correspondance est mappé dans linesRegion et surfaceRegion en fonction du type de paramètre
     */
     for(unsigned int i = 0; i < physicals.size(); i++)
     {
-        //Si paramètre correspondant à une ligne (ex : condition de bord)
-        if(physicals[i]->dim == 1 && method == DIRICHLETFLAG)
+        for(unsigned int j = 0; j < parameters.size(); j++)
         {
-            for(unsigned int j = 0; j < parameters.size(); j++)
+            if(parameters[j]->name == physicals[i]->name)
             {
-                if(parameters[j]->name == physicals[i]->name)
+                if(parameters[j]->dim != physicals[i]->dim)//Verification si erreurs entre les deux fichiers
                 {
-                    if(parameters[j]->dim != physicals[i]->dim)//Verification si erreurs entre les deux fichiers
-                    {
-                        cout << "Error: file.phy and file.msh do not correspond" << endl;
-                    }
-
-                    if(type == THERMALFLAG)
-                    {
-                        if(parameters[j]->temperature != -1)
-                        {
-                            linesRegion[physicals[i]->num] = parameters[j]->temperature;
-                        }
-                    }
-                    else if(type == ELECTRICFLAG)
-                    {
-                        if(parameters[j]->voltage != -1)
-                        {
-                            linesRegion[physicals[i]->num] = parameters[j]->voltage;
-                        }
-                    }
+                    cout << "Error: file.phy and file.msh do not correspond" << endl;
                 }
-            }
-        }
-        else if(physicals[i]->dim == 2)
-        {
-            for(unsigned int j = 0; j < parameters.size(); j++)
-            {
-                if(parameters[j]->name == physicals[i]->name)
+                else
                 {
-                    if(parameters[j]->dim != physicals[i]->dim)
-                    {
-                        cout << "Error: file.phy and file.msh do not correspond" << endl;
-                    }
-
-                    if(type == THERMALFLAG)
-                    {
-                        std::vector<double> v(9);
-
-                        v[0] = parameters[j]->thermalGeneration;
-
-                        v[1] = parameters[j]->thermalConductivity[0]->conductivity[0][0];
-                        v[2] = parameters[j]->thermalConductivity[0]->conductivity[0][1];
-                        v[3] = parameters[j]->thermalConductivity[0]->conductivity[1][0];
-                        v[4] = parameters[j]->thermalConductivity[0]->conductivity[1][1];
-
-                        v[5] = parameters[j]->thermalConductivity[1]->conductivity[0][0];
-                        v[6] = parameters[j]->thermalConductivity[1]->conductivity[0][1];
-                        v[7] = parameters[j]->thermalConductivity[1]->conductivity[1][0];
-                        v[8] = parameters[j]->thermalConductivity[1]->conductivity[1][1];
-
-                        surfaceRegion[physicals[i]->num] = v;
-                    }
-                    else if(type == ELECTRICFLAG)
-                    {
-                        std::vector<double> v(9);
-
-                        v[0] = parameters[j]->electricalGeneration;
-
-                        v[1] = parameters[j]->electricalConductivity[0]->conductivity[0][0];
-                        v[2] = parameters[j]->electricalConductivity[0]->conductivity[0][1];
-                        v[3] = parameters[j]->electricalConductivity[0]->conductivity[1][0];
-                        v[4] = parameters[j]->electricalConductivity[0]->conductivity[1][1];
-
-                        v[5] = parameters[j]->electricalConductivity[1]->conductivity[0][0];
-                        v[6] = parameters[j]->electricalConductivity[1]->conductivity[0][1];
-                        v[7] = parameters[j]->electricalConductivity[1]->conductivity[1][0];
-                        v[8] = parameters[j]->electricalConductivity[1]->conductivity[1][1];
-
-                        surfaceRegion[physicals[i]->num] = v;
-                    }
+                    region[physicals[i]->num] = parameters[j];
                 }
             }
         }
@@ -208,7 +142,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
     //f vector
     vector<double> f(nodes.size());
-    f_function(f,nodes,elements,surfaceRegion,0); //dernier paramètre de la fonction f nul =>
+    f_function(f,nodes,elements,region,type); //dernier paramètre de la fonction f nul =>
 
     //Theta_K and delta_theta_k vector
     std::vector<double> theta_k(nodes.size(),0);
@@ -223,14 +157,18 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     {
         if(elements[l]->type == 1)//If line
         {
-            if(linesRegion.count(elements[l]->region) == 1)//If linesRegion contains elements[i]->region
+            if(region.count(elements[l]->region) == 1)//If linesRegion contains elements[i]->region
             {
                 for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
                 {
 					if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
 					{
-						theta_k[elements[l]->nodes[j]->num-1] = linesRegion[elements[l]->region];
-						flag_theta[elements[l]->nodes[j]->num-1]= flag;
+					    if(region[elements[l]->region]->temperature != -1)
+                        {
+                            theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->temperature;
+                            flag_theta[elements[l]->nodes[j]->num-1]= flag;
+                        }
+
 					}
                 }
             }
@@ -238,7 +176,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
     }
 
-    
+
     gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());//Matrix used in building KT
     std::vector<double> RHS(nodes.size());//Right Hand Side in Newton Raphson algorithm
 
@@ -252,10 +190,10 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         //Newton Raphson routine
         NewtonRaphson(nodes, elements, physicals, parameters,
 					solution, theta_k,Tmp,
-					f,method,linesRegion, NodesCorresp,delta_theta_k,surfaceRegion,RHS);
+					f,method, NodesCorresp,delta_theta_k, region,RHS);
         //Initialize value for normRHS0
         if(iter==1)
-            normRHS0 = gmm::vect_norm2(RHS); 
+            normRHS0 = gmm::vect_norm2(RHS);
 
         //Check the convergence criterion
         Criterion = End_Criterion(RHS,normRHS0);
@@ -394,20 +332,20 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
 
 /* fonction permettant de calculer le vecteur f ainsi que la condition periodique sur le noeud 1 (condition sur la temperature moyenne)*/
-void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,std::vector<double> > &surfaceRegion, int constantProperty)
+void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,Parameter*> &region, FemFlag type)
 {
     double cons;
     for(unsigned int i = 0; i < elements.size(); i++)
     {
         if(elements[i]->type == 2)//If triangle
         {
-            if(constantProperty != 0)
+            if(type == THERMALFLAG)
             {
-                cons = constantProperty;
+                cons = region[elements[i]->region]->thermalGeneration;
             }
-            else
+            else if(type == ELECTRICFLAG)
             {
-                cons = surfaceRegion[elements[i]->region][0];// Dans le cas du calcul du vecteur f.
+                cons = region[elements[i]->region]->electricalGeneration;
             }
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];
