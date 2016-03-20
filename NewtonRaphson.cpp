@@ -14,7 +14,7 @@ using namespace std;
 /*---------------------------------------------NEWTON RAPHSON ROUTINE--------------------------------------------------------------*/
 
 void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<double> &theta_k,
-					std::vector<double> &qext,FemFlag method, std::map<Node*, Node*> &NodesCorresp,
+					std::vector<double> &qext, FemFlag method, std::map<Node*, Node*> &NodesCorresp,
 					std::vector<double> &delta_theta_k, std::map<int,Parameter*> &region, std::vector<double> &RHS)
 {
     std::vector<double> qint(nodes.size()); //Internal flux vector
@@ -214,13 +214,13 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &regio
 
             if(q_m_x.size() != 0 && q_m_y.size() != 0)
             {
-                q_m_x[n1->num-1] += tmp_vec[0];
-                q_m_x[n2->num-1] += tmp_vec[0];
-                q_m_x[n3->num-1] += tmp_vec[0];
+                q_m_x[n1->num-1] -= tmp_vec[0];
+                q_m_x[n2->num-1] -= tmp_vec[0];
+                q_m_x[n3->num-1] -= tmp_vec[0];
 
-                q_m_y[n1->num-1] += tmp_vec[1];
-                q_m_y[n2->num-1] += tmp_vec[1];
-                q_m_y[n3->num-1] += tmp_vec[1];
+                q_m_y[n1->num-1] -= tmp_vec[1];
+                q_m_y[n2->num-1] -= tmp_vec[1];
+                q_m_y[n3->num-1] -= tmp_vec[1];
             }
 
 
@@ -337,10 +337,10 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
 
             //Inverse of the Jacobian Matrix
             gmm::dense_matrix<double> inv_J(2,2);
-            inv_J(0,0) = 1/detJ*(y3-y1);
-            inv_J(0,1) = 1/detJ*(y1-y2);
-            inv_J(1,0) = 1/detJ*(x1-x3);
-            inv_J(1,1) = 1/detJ*(x2-x1);
+            inv_J(0,0) = 1.0/detJ*(y3-y1);
+            inv_J(0,1) = 1.0/detJ*(y1-y2);
+            inv_J(1,0) = 1.0/detJ*(x1-x3);
+            inv_J(1,1) = 1.0/detJ*(x2-x1);
 
             //Matrix containing the gradients of the shape functions in isoparametric coordinates
             gmm::dense_matrix<double> grad_phi(2,3);
@@ -435,6 +435,28 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
             int num1 = NodesCorresp[n1]->num-1;
             int num2 = NodesCorresp[n2]->num-1;
             int num3 = NodesCorresp[n3]->num-1;
+
+            cout << "K1" << endl;
+            for(unsigned int i=0; i<3; i++)
+            {
+                for(unsigned int j=0; j<3; j++)
+                {
+                    cout << Ke_1(i,j) << "\t\t";
+                }
+                cout << endl;
+            }
+
+            cout << "K2" << endl;
+            for(unsigned int i=0; i<3; i++)
+            {
+                for(unsigned int j=0; j<3; j++)
+                {
+                    cout << Ke_2(i,j) << "\t\t";
+                }
+                cout << endl;
+            }
+            int pause;
+            cin >> pause;
 
 
             Tmp(num1, n1->num-1) += (Ke_1(0,0) + Ke_2(0,0));
