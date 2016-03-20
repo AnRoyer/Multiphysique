@@ -15,7 +15,7 @@ using namespace std;
 
 void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<double> &theta_k,
 					std::vector<double> &qext, FemFlag method, std::map<Node*, Node*> &NodesCorresp,
-					std::vector<double> &delta_theta_k, std::map<int,Parameter*> &region, std::vector<double> &RHS)
+					std::vector<double> &delta_theta_k, std::map<int,Parameter*> &region, std::vector<double> &RHS, NodeCorner &corner, NodeBorder &border, Periodique &conditions)
 {
     std::vector<double> qint(nodes.size()); //Internal flux vector
 	gmm::row_matrix< gmm::wsvector<double> > KT_tmp(nodes.size(), nodes.size());//Tangent matrix used for build-in
@@ -24,14 +24,11 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     //Internal Flux : qint
     std::vector<double> q_m_x(0); //Internal flux vector
     std::vector<double> q_m_y(0); //Internal flux vector
+
 	Internal_flux(theta_k, region, elements, qint, q_m_x, q_m_y);
 
     //TANGENT STIFFNESS MATRIX :  KT
     Tangent_Stiffness_Matrix(theta_k, region, elements, KT_tmp, NodesCorresp, nodes);
-
-    //Building of the Right Hand Side
-    for (unsigned int i=0 ; i<nodes.size(); i++)
-        RHS[i] = qint[i]+qext[i];
 
     //Including the Dirichlet boundary conditions
     if(method == DIRICHLETFLAG)
@@ -61,6 +58,12 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
             }
         }
 
+        //Building of the Right Hand Side
+        for (unsigned int i=0 ; i<nodes.size(); i++)
+        {
+            RHS[i] = qint[i]+qext[i];
+        }
+
         //Including the Dirichlet boundary conditions in RHS
         for(unsigned int i = 0; i < elements.size(); i++)
         {
@@ -76,23 +79,144 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
             }
         }
     }
+    else if(method == PERIODICFLAG)
+    {
+        double lx = abs(corner.C2->x - corner.C1->x);
+        double ly = abs(corner.C4->y - corner.C1->y);
+        double vol = 0.0;//Volume du domaine
 
+        double Tavg = conditions.meanTemperature;
+        double gradAvg_x = conditions.xGradient;
+        double gradAvg_y = conditions.yGradient;
 
+        //Condition correspondant au noeud 1: temperature moyenne.
+        unsigned int numC1 = corner.C1->num-1;
+        vector<double> c(nodes.size());//coefficients
+
+        f_function(c, nodes, elements, region, THERMALFLAG, 1);
+
+        for(unsigned int j=0; j<nodes.size(); j++)
+        {
+            KT_tmp(numC1,j) = c[j];
+            vol += c[j];
+        }
+
+        double somTheta = 0;
+        for(unsigned int j=0; j<nodes.size(); j++)
+        {
+            somTheta += c[j]*theta_k[j];
+        }
+
+        qext[numC1] = vol*Tavg - somTheta;//condition
+
+        //Conditions sur les noeuds 2 3 et 4.
+        unsigned int numC2 = corner.C2->num-1;
+        unsigned int numC3 = corner.C3->num-1;
+        unsigned int numC4 = corner.C4->num-1;
+
+        for(unsigned int j=0; j<nodes.size(); j++)
+        {
+            KT_tmp(numC2,j) = 0;
+            KT_tmp(numC3,j) = 0;
+            KT_tmp(numC4,j) = 0;
+
+            if(j == numC1)
+            {
+                KT_tmp(numC2,j) = -1;
+                KT_tmp(numC3,j) = -1;
+                KT_tmp(numC4,j) = -1;
+            }
+
+            if(j == numC2)
+            {
+                KT_tmp(numC2,j) = 1;
+            }
+            else if(j == numC3)
+            {
+                KT_tmp(numC3,j) = 1;
+            }
+            else if(j == numC4)
+            {
+                KT_tmp(numC4,j) = 1;
+            }
+
+        }
+
+        //conditions sur qext correspondants aux noeuds des coins0.
+        qext[numC2] = gradAvg_x*lx + theta_k[numC1] - theta_k[numC2];
+        qext[numC3] = (gradAvg_x*lx + gradAvg_y*ly) + theta_k[numC1] - theta_k[numC3];
+        qext[numC4] = gradAvg_y*ly + theta_k[numC1] - theta_k[numC4];
+
+        //conditions sur qext correspondant aux noeuds à droite et en haut
+        for(unsigned int i=0;i<border.RightNodes.size();i++)
+        {
+            unsigned int numNode = border.RightNodes[i]->num-1;
+            for(unsigned int j=0; j<nodes.size(); j++)
+            {
+                KT_tmp(numNode,j) = 0;
+
+                if(j == NodesCorresp[border.RightNodes[i]]->num-1)
+                {
+                    KT_tmp(numNode,j) = -1;
+                }
+
+                if(j == numNode)
+                {
+                    KT_tmp(numNode,j) = 1;
+                }
+
+            }
+
+            qext[numNode] = gradAvg_x*lx + theta_k[NodesCorresp[border.RightNodes[i]]->num-1] - theta_k[numNode];
+        }
+
+        for(unsigned int i=0;i<border.TopNodes.size();i++)
+        {
+            unsigned int numNode = border.TopNodes[i]->num-1;
+
+            for(unsigned int j=0; j<nodes.size(); j++)
+            {
+                KT_tmp(numNode,j) = 0;
+
+                if(j == NodesCorresp[border.TopNodes[i]]->num-1)
+                {
+                    KT_tmp(numNode,j) = -1;
+                }
+
+                if(j == numNode)
+                {
+                    KT_tmp(numNode,j) = 1;
+                }
+
+            }
+
+            qext[numNode] = gradAvg_y*ly + theta_k[NodesCorresp[border.TopNodes[i]]->num-1] - theta_k[numNode];
+        }
+
+        //Building of the Right Hand Side
+        for (unsigned int i=0 ; i<nodes.size(); i++)
+        {
+            RHS[i] = qint[i]+qext[i];
+        }
+    }
 
     //Solving the system
     gmm::copy(KT_tmp, KT);
     gmm::lu_solve(KT, delta_theta_k, RHS);
 
-    //Reincluding the Dirichlet boundary conditions in delta_theta_k to avoid little error in system resolution
-    for(unsigned int i = 0; i < elements.size(); i++)
+    if(method == DIRICHLETFLAG)
     {
-        if(elements[i]->type == 1)//If line
+        //Reincluding the Dirichlet boundary conditions in delta_theta_k to avoid little error in system resolution
+        for(unsigned int i = 0; i < elements.size(); i++)
         {
-            if(region.count(elements[i]->region) == 1 && region[elements[i]->region]->temperature != -1)//If linesRegion contains elements[i]->region
+            if(elements[i]->type == 1)//If line
             {
-                for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
+                if(region.count(elements[i]->region) == 1 && region[elements[i]->region]->temperature != -1)//If linesRegion contains elements[i]->region
                 {
-                    delta_theta_k[elements[i]->nodes[j]->num-1] = 0;
+                    for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
+                    {
+                        delta_theta_k[elements[i]->nodes[j]->num-1] = 0;
+                    }
                 }
             }
         }
@@ -100,10 +224,11 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
     for (unsigned int i=0; i<nodes.size(); i++)
 	{
-		theta_k[i]+=delta_theta_k[i];
-	}
-
-
+		theta_k[i] += delta_theta_k[i];
+		//cout << theta_k[i] << "\t" << delta_theta_k[i] << "\t" << RHS[i] << "\t" << endl;
+    }
+    int pause;
+    //cin >> pause;
 }//end of Newton Raphson
 
 

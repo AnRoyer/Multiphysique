@@ -43,8 +43,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
 
     //Tri des noeuds
-    Node *C1 = NULL,*C2 = NULL,*C3 = NULL,*C4 = NULL;//pointeurs vers les noeuds des coins
-    vector<Node*> LeftNodes,RightNodes,TopNodes,BottomNodes;//vecteurs contenant les noeuds des bords
+    NodeCorner corner;
+    NodeBorder border;//vecteurs contenant les noeuds des bords
     map<Node*, Node*> NodesCorresp;//Vecteur de correspondance qui servira à additionner les lignes des noeuds en vis-a-vis
 
     double xmin = nodes[0]->x;
@@ -67,7 +67,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
         else if(nodes[i]->y > ymax)
         {
-        ymax = nodes[i]->y;
+            ymax = nodes[i]->y;
         }
     }
 
@@ -79,66 +79,62 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
         if(x == xmin && y != ymin && y != ymax)
         {
-            LeftNodes.push_back(nodes[i]);
+            border.LeftNodes.push_back(nodes[i]);
         }
         else if(x == xmax && y != ymin && y != ymax)
         {
-            RightNodes.push_back(nodes[i]);
+            border.RightNodes.push_back(nodes[i]);
         }
         else if(y == ymax && x != xmin && x != xmax)
         {
-            TopNodes.push_back(nodes[i]);
+            border.TopNodes.push_back(nodes[i]);
         }
         else if(y == ymin && x != xmin && x != xmax)
         {
-            BottomNodes.push_back(nodes[i]);
+            border.BottomNodes.push_back(nodes[i]);
         }
         else if(x == xmin && y == ymin)
         {
-            C1 = nodes[i];
+            corner.C1 = nodes[i];
         }
         else if(x == xmax && y == ymin)
         {
-            C2 = nodes[i];
+            corner.C2 = nodes[i];
         }
         else if(x == xmax && y == ymax)
         {
-            C3 = nodes[i];
+            corner.C3 = nodes[i];
         }
         else if(x == xmin && y == ymax)
         {
-            C4 = nodes[i];
+            corner.C4 = nodes[i];
         }
     }
 
     if(method == PERIODICFLAG)/*Si conditions periodiques alors le mapping "NodesCorresp" associe les noeuds en vis-a-vis. Sinon, le mapping est quand même utilisé mais tous les noeuds sont mappés vers eux-mêmes.*/
     {
-        for(unsigned int i = 0; i < LeftNodes.size(); i++)
+        for(unsigned int i = 0; i < border.LeftNodes.size(); i++)
         {
-            for(unsigned int j = 0; j < RightNodes.size(); j++)
+            for(unsigned int j = 0; j < border.RightNodes.size(); j++)
             {
-                if(abs(LeftNodes[i]->y - RightNodes[j]->y)<1e-5)
+                if(abs(border.LeftNodes[i]->y - border.RightNodes[j]->y) < 1e-5)
                 {
-                    NodesCorresp[RightNodes[j]] = LeftNodes[i];
+                    NodesCorresp[border.RightNodes[j]] = border.LeftNodes[i];
                 }
            }
         }
 
-        for(unsigned int i = 0; i < BottomNodes.size(); i++)
+        for(unsigned int i = 0; i < border.BottomNodes.size(); i++)
         {
-            for(unsigned int j = 0; j < TopNodes.size(); j++)
+            for(unsigned int j = 0; j < border.TopNodes.size(); j++)
             {
-                if(abs(BottomNodes[i]->x - TopNodes[j]->x)<1e-5)
+                if(abs(border.BottomNodes[i]->x - border.TopNodes[j]->x) < 1e-5)
                 {
-                    NodesCorresp[TopNodes[j]] = BottomNodes[i];
+                    NodesCorresp[border.TopNodes[j]] = border.BottomNodes[i];
                 }
             }
         }
     }
-
-
-
-
 
     //f vector
     vector<double> f(nodes.size());
@@ -149,31 +145,39 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     std::vector<double> delta_theta_k(nodes.size());
 
 
-    //Including the Dirichlet condition on theta_k
-	std::vector<double> flag_theta(nodes.size()); //Vector aimed at keeping in mind the allocation
-	double flag = 145;
-
-    for(unsigned int l = 0; l < elements.size(); l++)
+    if(method == DIRICHLETFLAG)//Including the Dirichlet condition on theta_k
     {
-        if(elements[l]->type == 1)//If line
-        {
-            if(region.count(elements[l]->region) == 1)//If linesRegion contains elements[i]->region
-            {
-                for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
-                {
-					if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
-					{
-					    if(region[elements[l]->region]->temperature != -1)
-                        {
-                            theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->temperature;
-                            flag_theta[elements[l]->nodes[j]->num-1]= flag;
-                        }
+        std::vector<double> flag_theta(nodes.size()); //Vector aimed at keeping in mind the allocation
+        double flag = 145;
 
-					}
+        for(unsigned int l = 0; l < elements.size(); l++)
+        {
+            if(elements[l]->type == 1)//If line
+            {
+                if(region.count(elements[l]->region) == 1)//If linesRegion contains elements[i]->region
+                {
+                    for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
+                    {
+                        if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
+                        {
+                            if(region[elements[l]->region]->temperature != -1)
+                            {
+                                theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->temperature;
+                                flag_theta[elements[l]->nodes[j]->num-1]= flag;
+                            }
+
+                        }
+                    }
                 }
             }
         }
-
+    }
+    else if(method == PERIODICFLAG)
+    {
+        for(unsigned int l = 0; l < nodes.size(); l++)
+        {
+            theta_k[l] = 0;
+        }
     }
 
     std::vector<double> RHS(nodes.size());//Right Hand Side in Newton Raphson algorithm
@@ -188,7 +192,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     while(Criterion == false)
     {
         //Newton Raphson routine
-        NewtonRaphson(nodes, elements, physicals, theta_k, f, method, NodesCorresp, delta_theta_k, region, RHS);
+        NewtonRaphson(nodes, elements, physicals, theta_k, f, method, NodesCorresp, delta_theta_k, region, RHS, corner, border, conditions);
         //Initialize value for normRHS0
         if(iter==1)
             normRHS0 = gmm::vect_norm2(RHS);
@@ -199,10 +203,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         iter++;
     }
 
-    Internal_flux(theta_k, region, elements, f, q_m_x, q_m_y);
-
-
-
+    Internal_flux(theta_k, region, elements, f, q_m_x, q_m_y);//Chargement de la solution pour la solution du flux
 
     /*
 
@@ -359,21 +360,23 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
                 {
                     cons = region[elements[i]->region]->electricalGeneration;
                 }
-                Node *n1 = elements[i]->nodes[0];
-                Node *n2 = elements[i]->nodes[1];
-                Node *n3 = elements[i]->nodes[2];
-                double x1 = n1->x;
-                double y1 = n1->y;
-                double x2 = n2->x;
-                double y2 = n2->y;
-                double x3 = n3->x;
-                double y3 = n3->y;
-                double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
 
-                f[n1->num-1] += cons*J/6;
-                f[n2->num-1] += cons*J/6;
-                f[n3->num-1] += cons*J/6;
             }
+
+            Node *n1 = elements[i]->nodes[0];
+            Node *n2 = elements[i]->nodes[1];
+            Node *n3 = elements[i]->nodes[2];
+            double x1 = n1->x;
+            double y1 = n1->y;
+            double x2 = n2->x;
+            double y2 = n2->y;
+            double x3 = n3->x;
+            double y3 = n3->y;
+            double J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
+
+            f[n1->num-1] += cons*J/6;
+            f[n2->num-1] += cons*J/6;
+            f[n3->num-1] += cons*J/6;
         }
     }
 }
