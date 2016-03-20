@@ -83,6 +83,21 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     gmm::copy(KT_tmp, KT);
     gmm::lu_solve(KT, delta_theta_k, RHS);
 
+    //Reincluding the Dirichlet boundary conditions in delta_theta_k to avoid little error in system resolution
+    for(unsigned int i = 0; i < elements.size(); i++)
+    {
+        if(elements[i]->type == 1)//If line
+        {
+            if(region.count(elements[i]->region) == 1 && region[elements[i]->region]->temperature != -1)//If linesRegion contains elements[i]->region
+            {
+                for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
+                {
+                    delta_theta_k[elements[i]->nodes[j]->num-1] = 0;
+                }
+            }
+        }
+    }
+
     for (unsigned int i=0; i<nodes.size(); i++)
 	{
 		theta_k[i]+=delta_theta_k[i];
@@ -435,29 +450,6 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
             int num1 = NodesCorresp[n1]->num-1;
             int num2 = NodesCorresp[n2]->num-1;
             int num3 = NodesCorresp[n3]->num-1;
-
-            cout << "K1" << endl;
-            for(unsigned int i=0; i<3; i++)
-            {
-                for(unsigned int j=0; j<3; j++)
-                {
-                    cout << Ke_1(i,j) << "\t\t";
-                }
-                cout << endl;
-            }
-
-            cout << "K2" << endl;
-            for(unsigned int i=0; i<3; i++)
-            {
-                for(unsigned int j=0; j<3; j++)
-                {
-                    cout << Ke_2(i,j) << "\t\t";
-                }
-                cout << endl;
-            }
-            int pause;
-            cin >> pause;
-
 
             Tmp(num1, n1->num-1) += (Ke_1(0,0) + Ke_2(0,0));
             Tmp(num1, n2->num-1) += (Ke_1(0,1) + Ke_2(0,1));
