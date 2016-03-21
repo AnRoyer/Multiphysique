@@ -11,6 +11,26 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
+    cout << "\t############################################################" << endl;
+    cout << "\t############################################################" << endl;
+    cout << "\t##                                                        ##" << endl;
+    cout << "\t##                                             222222     ##" << endl;
+    cout << "\t##                                                 22     ##" << endl;
+    cout << "\t##     FFFFFFFFFFFFFFFF    EEEEEEEEEEEEEEEE    222222     ##" << endl;
+    cout << "\t##     FF                  EE                  22         ##" << endl;
+    cout << "\t##     FF                  EE                  222222     ##" << endl;
+    cout << "\t##     FF                  EE                             ##" << endl;
+    cout << "\t##     FF                  EE                             ##" << endl;
+    cout << "\t##     FFFFFFFFFFFF        EEEEEEEEEEEE                   ##" << endl;
+    cout << "\t##     FF                  EE                             ##" << endl;
+    cout << "\t##     FF                  EE                             ##" << endl;
+    cout << "\t##     FF                  EE                             ##" << endl;
+    cout << "\t##     FF                  EE                             ##" << endl;
+    cout << "\t##     FF                  EEEEEEEEEEEEEEEE               ##" << endl;
+    cout << "\t##                                                        ##" << endl;
+    cout << "\t############################################################" << endl;
+    cout << "\t############################################################" << endl << endl << endl;
+
     if(argc < 3)
     {
         cout << "Usage: " << argv[0] << " file.msh file.phy" << endl;

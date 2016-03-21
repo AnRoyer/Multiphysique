@@ -108,6 +108,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
         }
 
         qext[numC1] = vol*Tavg - somTheta;//condition
+        qint[numC1] = 0;
 
         //Conditions sur les noeuds 2 3 et 4.
         unsigned int numC2 = corner.C2->num-1;
@@ -147,6 +148,10 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
         qext[numC3] = (gradAvg_x*lx + gradAvg_y*ly) + theta_k[numC1] - theta_k[numC3];
         qext[numC4] = gradAvg_y*ly + theta_k[numC1] - theta_k[numC4];
 
+        qint[numC2] = 0;
+        qint[numC3] = 0;
+        qint[numC4] = 0;
+
         //conditions sur qext correspondant aux noeuds à droite et en haut
         for(unsigned int i=0;i<border.RightNodes.size();i++)
         {
@@ -167,7 +172,9 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
             }
 
+            qext[NodesCorresp[border.RightNodes[i]]->num-1] = qint[numNode];
             qext[numNode] = gradAvg_x*lx + theta_k[NodesCorresp[border.RightNodes[i]]->num-1] - theta_k[numNode];
+            qint[numNode] = 0;
         }
 
         for(unsigned int i=0;i<border.TopNodes.size();i++)
@@ -190,7 +197,9 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
             }
 
+            qext[NodesCorresp[border.TopNodes[i]]->num-1] = qint[numNode];
             qext[numNode] = gradAvg_y*ly + theta_k[NodesCorresp[border.TopNodes[i]]->num-1] - theta_k[numNode];
+            qint[numNode] = 0;
         }
 
         //Building of the Right Hand Side
@@ -225,10 +234,8 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     for (unsigned int i=0; i<nodes.size(); i++)
 	{
 		theta_k[i] += delta_theta_k[i];
-		//cout << theta_k[i] << "\t" << delta_theta_k[i] << "\t" << RHS[i] << "\t" << endl;
     }
-    int pause;
-    //cin >> pause;
+
 }//end of Newton Raphson
 
 
