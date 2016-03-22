@@ -104,7 +104,7 @@ int main(int argc, char **argv)
     writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
     writeMSH((char*)"solutionFlux.pos", solutionFlux);
 
-    /*FILE *fp = fopen("dataMatlabT.dat", "w");
+    FILE *fp = fopen("dataMatlabT.dat", "w");
 
     std::map<Node*, std::vector<double> >::iterator itT = solutionT.begin();
 
@@ -115,6 +115,7 @@ int main(int argc, char **argv)
 
     fclose(fp);
 
+	/*
 
     fp = fopen("dataMatlabE.dat", "w");
 
