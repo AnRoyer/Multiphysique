@@ -1,0 +1,58 @@
+<phy type="dirichlet">
+	<global>
+		<thermal>
+			<mean>
+			$200$
+			</mean>
+			<xgradient>
+				$100$
+			</xgradient>
+			<ygradient>
+				$0$
+			</ygradient>
+		</thermal>
+	</global>
+	<line name="left">
+		<thermal>
+			<value>
+				$100$
+			</value>
+		</thermal>
+	</line>
+	<line name="right">
+		<thermal>
+			<value>
+				$1000$
+			</value>
+		</thermal>
+	</line>
+	<line name="top">
+		<thermal>
+			<value>
+				$NULL$
+			</value>
+		</thermal>
+	</line>
+	<line name="bottom">
+		<thermal>
+			<value>
+				$NULL$
+			</value>
+		</thermal>
+	</line>
+	<surface name="plane">
+		<thermal>
+			<value type="conductivity" name="alpha">
+				$1e-4$	$0$
+				$0$	$1e-4$
+			</value>
+			<value type="conductivity" name="beta">
+				$1e-6$	$0$
+				$0$	$1e-6$
+			</value>
+			<value type="generation">
+				$0$
+			</value>
+		</thermal>
+	</surface>
+</phy>

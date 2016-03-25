@@ -104,18 +104,18 @@ int main(int argc, char **argv)
     writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
     writeMSH((char*)"solutionFlux.pos", solutionFlux);
 
-    /*FILE *fp = fopen("dataMatlabT.dat", "w");
+    FILE *fp = fopen("dataMatlabT.dat", "w");
 
-    std::map<Node*, std::vector<double> >::iterator itT = solutionT.begin();
+    std::map<Node*, std::vector<double> >::iterator itT = solutionTemperature.begin();
 
-    for(itT = solutionT.begin(); itT != solutionT.end(); itT++)
+    for(itT = solutionTemperature.begin(); itT != solutionTemperature.end(); itT++)
     {
         fprintf(fp, "%.15f \t %.15f \t %.15f \n", itT->first->x, itT->first->y, itT->second[0]);
     }
 
     fclose(fp);
 
-
+    /*
     fp = fopen("dataMatlabE.dat", "w");
 
     std::map<Node*, std::vector<double> >::iterator itE = solutionE.begin();

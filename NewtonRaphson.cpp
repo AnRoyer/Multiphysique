@@ -143,7 +143,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
         }
 
-        //conditions sur qext correspondants aux noeuds des coins0.
+        //conditions sur qext correspondants aux noeuds des coins.
         qext[numC2] = gradAvg_x*lx + theta_k[numC1] - theta_k[numC2];
         qext[numC3] = (gradAvg_x*lx + gradAvg_y*ly) + theta_k[numC1] - theta_k[numC3];
         qext[numC4] = gradAvg_y*ly + theta_k[numC1] - theta_k[numC4];
@@ -172,7 +172,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
             }
 
-            qext[NodesCorresp[border.RightNodes[i]]->num-1] = qint[numNode];
+            qext[NodesCorresp[border.RightNodes[i]]->num-1] += qint[numNode];
             qext[numNode] = gradAvg_x*lx + theta_k[NodesCorresp[border.RightNodes[i]]->num-1] - theta_k[numNode];
             qint[numNode] = 0;
         }
@@ -197,7 +197,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
             }
 
-            qext[NodesCorresp[border.TopNodes[i]]->num-1] = qint[numNode];
+            qext[NodesCorresp[border.TopNodes[i]]->num-1] += qint[numNode];
             qext[numNode] = gradAvg_y*ly + theta_k[NodesCorresp[border.TopNodes[i]]->num-1] - theta_k[numNode];
             qint[numNode] = 0;
         }
