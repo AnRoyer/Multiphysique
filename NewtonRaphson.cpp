@@ -9,7 +9,7 @@
 #include "NewtonRaphson.h"
 #include "fem.h"
 #ifdef GMM_USES_MUMPS
-#include <gmm/gmm_MUMPS_interface.h>
+#include "gmm/gmm_MUMPS_interface.h"
 #endif
 using namespace std;
 
