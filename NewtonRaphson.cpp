@@ -8,7 +8,9 @@
 #include "physicalio.h"
 #include "NewtonRaphson.h"
 #include "fem.h"
-
+#ifdef GMM_USES_MUMPS
+#include <gmm/gmm_MUMPS_interface.h>
+#endif
 using namespace std;
 
 /*---------------------------------------------NEWTON RAPHSON ROUTINE--------------------------------------------------------------*/
@@ -211,7 +213,13 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
     //Solving the system
     gmm::copy(KT_tmp, KT);
+#ifdef GMM_USES_MUMPS
+    std::cout << "solving linear system with MUMPS\n";
+    gmm::MUMPS_solve(KT, delta_theta_k, RHS);
+#else
+    std::cout << "solving linear system with gmm::lu_solve\n";
     gmm::lu_solve(KT, delta_theta_k, RHS);
+#endif
 
     if(method == DIRICHLETFLAG)
     {
