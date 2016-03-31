@@ -1,0 +1,26 @@
+// Gmsh project created on Tue Feb 09 12:40:37 2016
+Point(1) = {0, 0, 0, 1.0};
+Point(2) = {1, 0, -0, 1.0};
+Point(3) = {1, 1, 0, 1.0};
+Point(4) = {0, 1, 0, 1.0};
+Point(5) = {0.5, 0.5, 0, 1.0};
+Point(6) = {0.5, 0.7, 0, 1.0};
+Point(7) = {0.5, 0.3, 0, 1.0};
+Line(1) = {1, 2};
+Line(2) = {2, 3};
+Line(3) = {3, 4};
+Line(4) = {4, 1};
+Circle(5) = {6, 5, 7};
+Circle(6) = {7, 5, 6};
+Line Loop(7) = {1, 2, 3, 4};
+Line Loop(8) = {6, 5};
+Plane Surface(9) = {7, 8};
+Plane Surface(10) = {8};
+Physical Line("Down") = {1};
+Physical Line("Right") = {2};
+Physical Line("Up") = {3};
+Physical Line("Left") = {4};
+Physical Surface("Out") = {9};
+Physical Surface("In") = {10};
+Transfinite Line {4, 1, 2, 3} = 9 Using Progression 1;
+Transfinite Line {5, 6} = 17 Using Progression 1;
