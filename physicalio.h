@@ -10,24 +10,40 @@ struct Conductivity
 
 struct Parameter
 {
+	Parameter() 
+	{
+		dim = -1;
+		temperature = -1;
+		voltage = -1;
+		thermalGeneration = -1;
+		electricalGeneration = -1;
+	}
+
     std::string name;
-    int dim = -1;
+    int dim;
     //line parameters
-    double temperature = -1;
-    double voltage = -1;
+    double temperature;
+    double voltage;
     //surface parameters
     std::vector<Conductivity*> thermalConductivity;
     std::vector<Conductivity*> electricalConductivity;
-    double thermalGeneration = -1;
-    double electricalGeneration = -1;
+    double thermalGeneration;
+    double electricalGeneration;
 };
 
 struct Periodique
 {
-    double meanTemperature = -1;
-    double xGradient = -1;
-    double yGradient = -1;
-    bool exist = false;
+	Periodique()
+	{
+		meanTemperature = -1;
+		xGradient = -1;
+		yGradient = -1;
+		exist = false;
+	}
+    double meanTemperature;
+    double xGradient;
+    double yGradient;
+    bool exist;
 };
 
 struct XMLparam

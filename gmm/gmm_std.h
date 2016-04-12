@@ -1,32 +1,32 @@
 /* -*- c++ -*- (enables emacs c++ mode) */
 /*===========================================================================
- 
- Copyright (C) 2002-2015 Yves Renard
- 
- This file is a part of GETFEM++
- 
- Getfem++  is  free software;  you  can  redistribute  it  and/or modify it
- under  the  terms  of the  GNU  Lesser General Public License as published
- by  the  Free Software Foundation;  either version 3 of the License,  or
- (at your option) any later version along with the GCC Runtime Library
- Exception either version 3.1 or (at your option) any later version.
- This program  is  distributed  in  the  hope  that it will be useful,  but
- WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- or  FITNESS  FOR  A PARTICULAR PURPOSE.  See the GNU Lesser General Public
- License and GCC Runtime Library Exception for more details.
- You  should  have received a copy of the GNU Lesser General Public License
- along  with  this program;  if not, write to the Free Software Foundation,
- Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301, USA.
- 
- As a special exception, you  may use  this file  as it is a part of a free
- software  library  without  restriction.  Specifically,  if   other  files
- instantiate  templates  or  use macros or inline functions from this file,
- or  you compile this  file  and  link  it  with other files  to produce an
- executable, this file  does  not  by itself cause the resulting executable
- to be covered  by the GNU Lesser General Public License.  This   exception
- does not  however  invalidate  any  other  reasons why the executable file
- might be covered by the GNU Lesser General Public License.
- 
+
+Copyright (C) 2002-2012 Yves Renard
+
+This file is a part of GETFEM++
+
+Getfem++  is  free software;  you  can  redistribute  it  and/or modify it
+under  the  terms  of the  GNU  Lesser General Public License as published
+by  the  Free Software Foundation;  either version 3 of the License,  or
+(at your option) any later version along with the GCC Runtime Library
+Exception either version 3.1 or (at your option) any later version.
+This program  is  distributed  in  the  hope  that it will be useful,  but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or  FITNESS  FOR  A PARTICULAR PURPOSE.  See the GNU Lesser General Public
+License and GCC Runtime Library Exception for more details.
+You  should  have received a copy of the GNU Lesser General Public License
+along  with  this program;  if not, write to the Free Software Foundation,
+Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301, USA.
+
+As a special exception, you  may use  this file  as it is a part of a free
+software  library  without  restriction.  Specifically,  if   other  files
+instantiate  templates  or  use macros or inline functions from this file,
+or  you compile this  file  and  link  it  with other files  to produce an
+executable, this file  does  not  by itself cause the resulting executable
+to be covered  by the GNU Lesser General Public License.  This   exception
+does not  however  invalidate  any  other  reasons why the executable file
+might be covered by the GNU Lesser General Public License.
+
 ===========================================================================*/
 
 /**@file gmm_std.h
@@ -74,7 +74,6 @@
 # define SECURE_STRDUP(s) strdup(s)
 #endif
 
-#define GMM_NOPERATION(a) { abs(&(a) != &(a)); }
 
 /* ********************************************************************** */
 /*	Compilers detection.						  */
@@ -127,10 +126,10 @@
 #include <sstream>
 #include <numeric>
 #include <locale.h>
-
-
-#ifdef GETFEM_HAVE_OPENMP	
 #include <omp.h>
+
+
+#ifdef _OPENMP	
 	/**number of OpenMP threads*/
 	inline size_t num_threads(){return omp_get_max_threads();}
 	/**index of the current thread*/
@@ -333,40 +332,6 @@ typedef fixed_size_integer_generator<8>::uint_base_type uint64_type;
 #endif
 
 }
-
-  /* ******************************************************************** */
-  /*	Import/export classes and interfaces from a shared library          */
-  /* ******************************************************************** */
-
-#if defined(EXPORTED_TO_SHARED_LIB)
-#  if defined(_MSC_VER) || defined(__INTEL_COMPILER)    
-#     define APIDECL __declspec(dllexport)
-#  elif defined(__GNUC__)
-#     define __attribute__((visibility("default")))
-#  else
-#     define APIDECL
-#  endif
-#   if defined(IMPORTED_FROM_SHARED_LIB)
-#	  error INTENTIONAL COMPILCATION ERROR, DLL IMPORT AND EXPORT ARE INCOMPITABLE
-#   endif
-#endif
-
-#if defined(IMPORTED_FROM_SHARED_LIB)
-#  if defined(_MSC_VER) || defined(__INTEL_COMPILER)    
-#     define APIDECL __declspec(dllimport)
-#  else
-#     define APIDECL
-#  endif
-#   if defined(EXPORTED_TO_SHARED_LIB)
-#	  error INTENTIONAL COMPILCATION ERROR, DLL IMPORT AND EXPORT ARE INCOMPITABLE
-#   endif
-#endif
-
-#ifndef EXPORTED_TO_SHARED_LIB
-#  ifndef IMPORTED_FROM_SHARED_LIB
-#    define APIDECL  //empty, used during static linking
-#  endif
-#endif
 
 #endif /* GMM_STD_H__ */
 

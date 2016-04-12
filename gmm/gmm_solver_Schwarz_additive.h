@@ -1,7 +1,7 @@
 /* -*- c++ -*- (enables emacs c++ mode) */
 /*===========================================================================
  
- Copyright (C) 2002-2015 Yves Renard
+ Copyright (C) 2002-2012 Yves Renard
  
  This file is a part of GETFEM++
  
@@ -212,22 +212,23 @@ namespace gmm {
 #ifdef GMM_USES_MPI
      }
       if (nproc != size - 1) {
-        MPI_Sendrecv(&(Acsr.jc[0]), sizeA+1, MPI_INT, next, tag2,
-                     &(Acsrtemp.jc[0]), sizeA+1, MPI_INT, previous, tag2,
-                     MPI_COMM_WORLD, &status);
-        if (Acsrtemp.jc[sizeA] > size_type(sizepr)) {
-          sizepr = Acsrtemp.jc[sizeA];
-          gmm::resize(Acsrtemp.pr, sizepr);
-          gmm::resize(Acsrtemp.ir, sizepr);
-        }
-        MPI_Sendrecv(&(Acsr.ir[0]), Acsr.jc[sizeA], MPI_INT, next, tag1,
-                     &(Acsrtemp.ir[0]), Acsrtemp.jc[sizeA], MPI_INT, previous, tag1,
-                     MPI_COMM_WORLD, &status);
-        
-        MPI_Sendrecv(&(Acsr.pr[0]), Acsr.jc[sizeA], mpi_type(value_type()), next, tag3, 
-                     &(Acsrtemp.pr[0]), Acsrtemp.jc[sizeA], mpi_type(value_type()), previous, tag3,
-                     MPI_COMM_WORLD, &status);
-        gmm::copy(Acsrtemp, Acsr);
+	MPI_Sendrecv(Acsr.jc, sizeA+1, MPI_INT, next, tag2,
+		     Acsrtemp.jc, sizeA+1,MPI_INT,previous,tag2,
+		     MPI_COMM_WORLD,&status);
+	if (Acsrtemp.jc[sizeA] > size_type(sizepr)) {
+	  sizepr = Acsrtemp.jc[sizeA];
+	  delete[] Acsrtemp.pr; delete[] Acsrtemp.ir;
+	  Acsrtemp.pr = new value_type[sizepr];
+	  Acsrtemp.ir = new unsigned int[sizepr];
+	}
+	MPI_Sendrecv(Acsr.ir, Acsr.jc[sizeA], MPI_INT, next, tag1,
+		     Acsrtemp.ir, Acsrtemp.jc[sizeA],MPI_INT,previous,tag1,
+		     MPI_COMM_WORLD,&status);
+	
+	MPI_Sendrecv(Acsr.pr, Acsr.jc[sizeA], mpi_type(value_type()), next, tag3, 
+		     Acsrtemp.pr, Acsrtemp.jc[sizeA],mpi_type(value_type()),previous,tag3,
+		     MPI_COMM_WORLD,&status);
+	gmm::copy(Acsrtemp, Acsr);
       }
     }
       t_final=MPI_Wtime();
