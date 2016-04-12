@@ -1,7 +1,7 @@
 /* -*- c++ -*- (enables emacs c++ mode) */
 /*===========================================================================
  
- Copyright (C) 2002-2015 Yves Renard
+ Copyright (C) 2002-2012 Yves Renard
  
  This file is a part of GETFEM++
  
@@ -514,9 +514,8 @@ namespace gmm {
 	if (it != this->end() && it->c == c) it->e = e;
 	else {
 	  size_type ind = it - this->begin();
-          if (this->nb_stored() - ind > 800)
-            GMM_WARNING2("Inefficient addition of element in rsvector with "
-                         << this->nb_stored() - ind << " non-zero entries");
+          if (this->nb_stored() - ind > 300)
+            GMM_WARNING2("Inefficient addition of element in rsvector");
 	  base_type_::resize(nb_stored()+1, ev);
 	  if (ind != this->nb_stored() - 1) {
 	    it = this->begin() + ind;
@@ -530,7 +529,7 @@ namespace gmm {
   }
   
   template <typename T> T rsvector<T>::r(size_type c) const {
-    GMM_ASSERT2(c < nbl, "out of range. Index " << c << " for a length of " << nbl);
+    GMM_ASSERT2(c < nbl, "out of range");
     if (nb_stored() != 0) {
       elt_rsvector_<T> ev(c);
       const_iterator it = std::lower_bound(this->begin(), this->end(), ev);

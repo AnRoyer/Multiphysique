@@ -14,10 +14,17 @@ enum FemFlag
 
 struct NodeCorner
 {
-    Node *C1 = NULL;
-    Node *C2 = NULL;
-    Node *C3 = NULL;
-    Node *C4 = NULL;
+	NodeCorner()
+	{
+		C1 = NULL;
+		C2 = NULL;
+		C3 = NULL;
+		C4 = NULL;
+    }
+    Node *C1;
+    Node *C2;
+    Node *C3;
+    Node *C4;
 };
 
 struct NodeBorder

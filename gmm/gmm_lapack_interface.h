@@ -1,7 +1,7 @@
 /* -*- c++ -*- (enables emacs c++ mode) */
 /*===========================================================================
  
- Copyright (C) 2003-2015 Yves Renard
+ Copyright (C) 2003-2012 Yves Renard
  
  This file is a part of GETFEM++
  
@@ -35,6 +35,8 @@
    @brief gmm interface for LAPACK
 */
 
+#if defined(GMM_USES_LAPACK)
+
 #ifndef GMM_LAPACK_INTERFACE_H
 #define GMM_LAPACK_INTERFACE_H
 
@@ -42,8 +44,6 @@
 #include "gmm_dense_lu.h"
 #include "gmm_dense_qr.h"
 
-
-#if defined(GMM_USES_LAPACK)
 
 namespace gmm {
 
@@ -69,15 +69,6 @@ namespace gmm {
   /* implicit_qr_algorithm(dense_matrix<T>, std::vector<std::complex<T> >, */
   /*                       dense_matrix<T>)                                */
   /*                                                                       */
-  /* geev_interface_right                                                  */
-  /* geev_interface_left                                                   */
-  /*                                                                       */
-  /* schur(dense_matrix<T>, dense_matrix<T>, dense_matrix<T>)              */
-  /*                                                                       */
-  /* svd(dense_matrix<T>, dense_matrix<T>, dense_matrix<T>, std::vector<T>)*/
-  /* svd(dense_matrix<T>, dense_matrix<T>, dense_matrix<T>,                */
-  /*     std::vector<std::complex<T> >)                                    */
-  /*                                                                       */
   /* ********************************************************************* */
 
   /* ********************************************************************* */
@@ -93,7 +84,6 @@ namespace gmm {
     void sormqr_(...); void dormqr_(...); void cunmqr_(...); void zunmqr_(...);
     void sgees_ (...); void dgees_ (...); void cgees_ (...); void zgees_ (...);
     void sgeev_ (...); void dgeev_ (...); void cgeev_ (...); void zgeev_ (...);
-    void sgeesx_(...); void dgeesx_(...); void cgeesx_(...); void zgeesx_(...);
     void sgesvd_(...); void dgesvd_(...); void cgesvd_(...); void zgesvd_(...);
   }
 
@@ -120,8 +110,8 @@ namespace gmm {
 
 # define getrs_interface(f_name, trans1, lapack_name, base_type) inline    \
   void f_name(const dense_matrix<base_type > &A,                           \
-              const std::vector<int> &ipvt, std::vector<base_type > &x,    \
-              const std::vector<base_type > &b) {                          \
+	      const std::vector<int> &ipvt, std::vector<base_type > &x,    \
+	      const std::vector<base_type > &b) {                          \
     GMMLAPACK_TRACE("getrs_interface");                                    \
     int n = int(mat_nrows(A)), info, nrhs(1);                              \
     gmm::copy(b, x); trans1;                                               \
@@ -171,19 +161,19 @@ namespace gmm {
   /* QR factorization.                                                     */
   /* ********************************************************************* */
 
-# define geqrf_interface(lapack_name1, base_type) inline                   \
-  void qr_factor(dense_matrix<base_type > &A){                             \
-    GMMLAPACK_TRACE("geqrf_interface");                                    \
+# define geqrf_interface(lapack_name1, base_type) inline		   \
+  void qr_factor(dense_matrix<base_type > &A){			           \
+    GMMLAPACK_TRACE("geqrf_interface");				           \
     int m = int(mat_nrows(A)), n = int(mat_ncols(A)), info, lwork(-1);     \
     base_type work1;                                                       \
-    if (m && n) {                                                          \
-      std::vector<base_type > tau(n);                                      \
+    if (m && n) {							   \
+      std::vector<base_type > tau(n);					   \
       lapack_name1(&m, &n, &A(0,0), &m, &tau[0], &work1  , &lwork, &info); \
-      lwork = int(gmm::real(work1));                                       \
-      std::vector<base_type > work(lwork);                                 \
+      lwork = int(gmm::real(work1));					   \
+      std::vector<base_type > work(lwork);				   \
       lapack_name1(&m, &n, &A(0,0), &m, &tau[0], &work[0], &lwork, &info); \
-      GMM_ASSERT1(!info, "QR factorization failed");                       \
-    }                                                                      \
+      GMM_ASSERT1(!info, "QR factorization failed");			   \
+    }									   \
   }
     
   geqrf_interface(sgeqrf_, BLAS_S)
@@ -198,7 +188,7 @@ namespace gmm {
        dense_matrix<base_type > &Q, dense_matrix<base_type > &R) {         \
     GMMLAPACK_TRACE("geqrf_interface2");                                   \
     int m = int(mat_nrows(A)), n = int(mat_ncols(A)), info, lwork(-1);     \
-    base_type work1;                                                       \
+    base_type work1;		 					   \
     if (m && n) {                                                          \
       gmm::copy(A, Q);                                                     \
       std::vector<base_type > tau(n);                                      \
@@ -242,7 +232,7 @@ namespace gmm {
     lwork = int(gmm::real(work1));                                         \
     std::vector<base_type > work(lwork);                                   \
     lapack_name(&jobvs, &sort, p, &n, &H(0,0), &n, &sdim, &eigv1[0],       \
-                &eigv2[0], &Q(0,0), &n, &work[0], &lwork, &rwork[0],&info);\
+		&eigv2[0], &Q(0,0), &n, &work[0], &lwork, &rwork[0],&info);\
     GMM_ASSERT1(!info, "QR algorithm failed");                             \
     extract_eig(H, const_cast<VECT &>(eigval_), tol);                      \
   }
@@ -274,124 +264,100 @@ namespace gmm {
   gees_interface2(cgees_, BLAS_C)
   gees_interface2(zgees_, BLAS_Z)
 
-
-# define jobv_right char jobvl = 'N', jobvr = 'V';
-# define jobv_left char jobvl = 'V', jobvr = 'N';
-
-# define geev_interface(lapack_name, base_type, side)                      \
-  template <typename VECT> inline void geev_interface_ ## side(             \
+# define geev_int_right(lapack_name, base_type)			           \
+  template <typename VECT> inline void geev_interface_right(               \
          const dense_matrix<base_type > &A,  const VECT &eigval_,          \
-         dense_matrix<base_type > &Q) {                                    \
+         dense_matrix<base_type > &Q) {		                           \
     GMMLAPACK_TRACE("geev_interface");                                     \
     int n = int(mat_nrows(A)), info, lwork(-1); base_type work1;           \
     if (!n) return;                                                        \
     dense_matrix<base_type > H(n,n); gmm::copy(A, H);                      \
-    jobv_ ## side                                                          \
+    char jobvl = 'N', jobvr = 'V';                                         \
     std::vector<base_type > eigvr(n), eigvi(n);                            \
     lapack_name(&jobvl, &jobvr, &n, &H(0,0), &n, &eigvr[0], &eigvi[0],     \
-                &Q(0,0), &n, &Q(0,0), &n, &work1, &lwork, &info);          \
+		&Q(0,0), &n, &Q(0,0), &n, &work1, &lwork, &info);   	   \
     lwork = int(gmm::real(work1));                                         \
     std::vector<base_type > work(lwork);                                   \
     lapack_name(&jobvl, &jobvr, &n, &H(0,0), &n, &eigvr[0], &eigvi[0],     \
-                &Q(0,0), &n, &Q(0,0), &n, &work[0], &lwork, &info);        \
+		&Q(0,0), &n, &Q(0,0), &n, &work[0], &lwork, &info);    	   \
     GMM_ASSERT1(!info, "QR algorithm failed");                             \
-    gmm::copy(eigvr, gmm::real_part(const_cast<VECT &>(eigval_)));         \
-    gmm::copy(eigvi, gmm::imag_part(const_cast<VECT &>(eigval_)));         \
+    gmm::copy(eigvr, gmm::real_part(const_cast<VECT &>(eigval_)));	   \
+    gmm::copy(eigvi, gmm::imag_part(const_cast<VECT &>(eigval_)));	   \
   }
 
-# define geev_interface2(lapack_name, base_type, side)                     \
-  template <typename VECT> inline void geev_interface_ ## side(            \
+# define geev_int_rightc(lapack_name, base_type)			   \
+  template <typename VECT> inline void geev_interface_right(               \
          const dense_matrix<base_type > &A,  const VECT &eigval_,          \
-         dense_matrix<base_type > &Q) {                                    \
+         dense_matrix<base_type > &Q) {		                           \
     GMMLAPACK_TRACE("geev_interface");                                     \
     int n = int(mat_nrows(A)), info, lwork(-1); base_type work1;           \
     if (!n) return;                                                        \
     dense_matrix<base_type > H(n,n); gmm::copy(A, H);                      \
-    jobv_ ## side                                                          \
-    std::vector<base_type::value_type> rwork(2*n);                         \
+    char jobvl = 'N', jobvr = 'V';                                         \
+    std::vector<double> rwork(2*n);                                        \
     std::vector<base_type> eigv(n);                                        \
     lapack_name(&jobvl, &jobvr, &n, &H(0,0), &n, &eigv[0], &Q(0,0), &n,    \
-                &Q(0,0), &n, &work1, &lwork, &rwork[0], &info);            \
+		&Q(0,0), &n, &work1, &lwork, &rwork[0], &info);	   	   \
     lwork = int(gmm::real(work1));                                         \
     std::vector<base_type > work(lwork);                                   \
     lapack_name(&jobvl, &jobvr, &n, &H(0,0), &n, &eigv[0], &Q(0,0), &n,    \
-                &Q(0,0), &n, &work[0], &lwork,  &rwork[0],  &info);        \
+		&Q(0,0), &n, &work[0], &lwork,  &rwork[0],  &info);	   \
     GMM_ASSERT1(!info, "QR algorithm failed");                             \
-    gmm::copy(eigv, const_cast<VECT &>(eigval_));                          \
+    gmm::copy(eigv, const_cast<VECT &>(eigval_));			   \
   }
 
-  geev_interface(sgeev_, BLAS_S, right)
-  geev_interface(dgeev_, BLAS_D, right)
-  geev_interface2(cgeev_, BLAS_C, right)
-  geev_interface2(zgeev_, BLAS_Z, right)
+  geev_int_right(sgeev_, BLAS_S)
+  geev_int_right(dgeev_, BLAS_D)
+  geev_int_rightc(cgeev_, BLAS_C)
+  geev_int_rightc(zgeev_, BLAS_Z)
 
-  geev_interface(sgeev_, BLAS_S, left)
-  geev_interface(dgeev_, BLAS_D, left)
-  geev_interface2(cgeev_, BLAS_C, left)
-  geev_interface2(zgeev_, BLAS_Z, left) 
+# define geev_int_left(lapack_name, base_type)                             \
+  template <typename VECT> inline void geev_interface_left(                \
+         const dense_matrix<base_type > &A,  const VECT &eigval_,          \
+         dense_matrix<base_type > &Q) {	 	                           \
+    GMMLAPACK_TRACE("geev_interface");                                     \
+    int n = int(mat_nrows(A)), info, lwork(-1); base_type work1;           \
+    if (!n) return;                                                        \
+    dense_matrix<base_type > H(n,n); gmm::copy(A, H);                      \
+    char jobvl = 'V', jobvr = 'N';                                         \
+    std::vector<base_type > eigvr(n), eigvi(n);                            \
+    lapack_name(&jobvl, &jobvr, &n, &H(0,0), &n, &eigvr[0], &eigvi[0],     \
+		&Q(0,0), &n, &Q(0,0), &n, &work1, &lwork, &info);   	   \
+    lwork = int(gmm::real(work1));                                         \
+    std::vector<base_type > work(lwork);                                   \
+    lapack_name(&jobvl, &jobvr, &n, &H(0,0), &n, &eigvr[0], &eigvi[0],     \
+		&Q(0,0), &n, &Q(0,0), &n, &work[0], &lwork, &info);    	   \
+    GMM_ASSERT1(!info, "QR algorithm failed");                             \
+    gmm::copy(eigvr, gmm::real_part(const_cast<VECT &>(eigval_)));	   \
+    gmm::copy(eigvi, gmm::imag_part(const_cast<VECT &>(eigval_)));	   \
+  }
+
+# define geev_int_leftc(lapack_name, base_type)	  		           \
+  template <typename VECT> inline void geev_interface_left(                \
+         const dense_matrix<base_type > &A,  const VECT &eigval_,          \
+         dense_matrix<base_type > &Q) {		                           \
+    GMMLAPACK_TRACE("geev_interface");                                     \
+    int n = int(mat_nrows(A)), info, lwork(-1); base_type work1;           \
+    if (!n) return;                                                        \
+    dense_matrix<base_type > H(n,n); gmm::copy(A, H);                      \
+    char jobvl = 'V', jobvr = 'N';                                         \
+    std::vector<double> rwork(2*n);                                        \
+    std::vector<base_type> eigv(n);                                        \
+    lapack_name(&jobvl, &jobvr, &n, &H(0,0), &n, &eigv[0], &Q(0,0), &n,    \
+		&Q(0,0), &n, &work1, &lwork, &rwork[0], &info);	   	   \
+    lwork = int(gmm::real(work1));                                         \
+    std::vector<base_type > work(lwork);                                   \
+    lapack_name(&jobvl, &jobvr, &n, &H(0,0), &n, &eigv[0], &Q(0,0), &n,    \
+		&Q(0,0), &n, &work[0], &lwork,  &rwork[0],  &info);	   \
+    GMM_ASSERT1(!info, "QR algorithm failed");                             \
+    gmm::copy(eigv, const_cast<VECT &>(eigval_));			   \
+  }
+
+  geev_int_left(sgeev_, BLAS_S)
+  geev_int_left(dgeev_, BLAS_D)
+  geev_int_leftc(cgeev_, BLAS_C)
+  geev_int_leftc(zgeev_, BLAS_Z) 
     
-
-  /* ********************************************************************* */
-  /* SCHUR algorithm:                                                      */
-  /*  A = Q*S*(Q^T), with Q orthogonal and S upper quasi-triangula         */
-  /* ********************************************************************* */
-
-# define geesx_interface(lapack_name, base_type) inline                 \
-  void schur(dense_matrix<base_type> &A,                                \
-             dense_matrix<base_type> &S,                                \
-             dense_matrix<base_type> &Q) {                              \
-    GMMLAPACK_TRACE("geesx_interface");                                 \
-    int m = int(mat_nrows(A)), n = int(mat_ncols(A));                   \
-    GMM_ASSERT1(m == n, "Schur decomposition requires square matrix");  \
-    char jobvs = 'V', sort = 'N', sense = 'N';                          \
-    bool select = false;                                                \
-    int lwork = 8*n, sdim = 0, liwork = 1;                              \
-    std::vector<base_type> work(lwork), wr(n), wi(n);                   \
-    std::vector<int> iwork(liwork);                                     \
-    std::vector<int> bwork(1);                                          \
-    resize(S, n, n); copy(A, S);                                        \
-    resize(Q, n, n);                                                    \
-    base_type rconde(0), rcondv(0);                                     \
-    int info = -1;                                                      \
-    lapack_name(&jobvs, &sort, &select, &sense, &n, &S(0,0), &n,        \
-                &sdim, &wr[0], &wi[0], &Q(0,0), &n, &rconde, &rcondv,   \
-                &work[0], &lwork, &iwork[0], &liwork, &bwork[0], &info);\
-    GMM_ASSERT1(!info, "SCHUR algorithm failed");                       \
-  }
-
-# define geesx_interface2(lapack_name, base_type) inline                \
-  void schur(dense_matrix<base_type> &A,                                \
-             dense_matrix<base_type> &S,                                \
-             dense_matrix<base_type> &Q) {                              \
-    GMMLAPACK_TRACE("geesx_interface");                                 \
-    int m = int(mat_nrows(A)), n = int(mat_ncols(A));                   \
-    GMM_ASSERT1(m == n, "Schur decomposition requires square matrix");  \
-    char jobvs = 'V', sort = 'N', sense = 'N';                          \
-    bool select = false;                                                \
-    int lwork = 8*n, sdim = 0;                                          \
-    std::vector<base_type::value_type> rwork(lwork);                    \
-    std::vector<base_type> work(lwork), w(n);                           \
-    std::vector<int> bwork(1);                                          \
-    resize(S, n, n); copy(A, S);                                        \
-    resize(Q, n, n);                                                    \
-    base_type rconde(0), rcondv(0);                                     \
-    int info = -1;                                                      \
-    lapack_name(&jobvs, &sort, &select, &sense, &n, &S(0,0), &n,        \
-                &sdim, &w[0], &Q(0,0), &n, &rconde, &rcondv,            \
-                &work[0], &lwork, &rwork[0], &bwork[0], &info);         \
-    GMM_ASSERT1(!info, "SCHUR algorithm failed");                       \
-  }
-
-  geesx_interface(sgeesx_, BLAS_S)
-  geesx_interface(dgeesx_, BLAS_D)
-  geesx_interface2(cgeesx_, BLAS_C)
-  geesx_interface2(zgeesx_, BLAS_Z)
-
-  template <typename MAT>
-  void schur(const MAT &A_, MAT &S, MAT &Q) {
-   MAT A(A_);
-   schur(A, S, Q);
-  }
 
 
   /* ********************************************************************* */
@@ -400,74 +366,56 @@ namespace gmm {
   /* ********************************************************************* */
     
 # define gesvd_interface(lapack_name, base_type) inline                 \
-  void svd(dense_matrix<base_type> &X,                                  \
-           dense_matrix<base_type> &U,                                  \
-           dense_matrix<base_type> &Vtransposed,                        \
-           std::vector<base_type> &sigma) {                             \
-    GMMLAPACK_TRACE("gesvd_interface");                                 \
-    int m = int(mat_nrows(X)), n = int(mat_ncols(X));                   \
-    int mn_min = m < n ? m : n;                                         \
-    sigma.resize(mn_min);                                               \
-    std::vector<base_type> work(15 * mn_min);                           \
-    int lwork = int(work.size());                                       \
-    resize(U, m, m);                                                    \
-    resize(Vtransposed, n, n);                                          \
-    char job = 'A';                                                     \
-    int info = -1;                                                      \
-    lapack_name(&job, &job, &m, &n, &X(0,0), &m, &sigma[0], &U(0,0),    \
-                &m, &Vtransposed(0,0), &n, &work[0], &lwork, &info);    \
+  void svd(dense_matrix<base_type> &X,					\
+	   dense_matrix<base_type> &U,                                  \
+           dense_matrix<base_type> &Vtransposed,			\
+	   std::vector<base_type> &sigma) {				\
+    GMMLAPACK_TRACE("gesvd_interface");					\
+    int m = int(mat_nrows(X)), n = int(mat_ncols(X));	       		\
+    int mn_min = m < n ? m : n;						\
+    sigma.resize(mn_min);						\
+    std::vector<base_type> work(15 * mn_min);				\
+    int lwork = int(work.size());	       				\
+    resize(U, m, m);							\
+    resize(Vtransposed, n, n);						\
+    char job = 'A';							\
+    int info = -1;							\
+    lapack_name(&job, &job, &m, &n, &X(0,0), &m, &sigma[0], &U(0,0),	\
+		&m, &Vtransposed(0,0), &n, &work[0], &lwork, &info);	\
   }
 
 # define cgesvd_interface(lapack_name, base_type, base_type2) inline    \
-  void svd(dense_matrix<base_type> &X,                                  \
-           dense_matrix<base_type> &U,                                  \
-           dense_matrix<base_type> &Vtransposed,                        \
-           std::vector<base_type2> &sigma) {                            \
-    GMMLAPACK_TRACE("gesvd_interface");                                 \
-    int m = int(mat_nrows(X)), n = int(mat_ncols(X));                   \
-    int mn_min = m < n ? m : n;                                         \
-    sigma.resize(mn_min);                                               \
-    std::vector<base_type> work(15 * mn_min);                           \
-    std::vector<base_type2> rwork(5 * mn_min);                          \
-    int lwork = int(work.size());                                       \
-    resize(U, m, m);                                                    \
-    resize(Vtransposed, n, n);                                          \
-    char job = 'A';                                                     \
-    int info = -1;                                                      \
-    lapack_name(&job, &job, &m, &n, &X(0,0), &m, &sigma[0], &U(0,0),    \
-                &m, &Vtransposed(0,0), &n, &work[0], &lwork,            \
-                &rwork[0], &info);                                      \
+  void svd(dense_matrix<base_type> &X,					\
+	   dense_matrix<base_type> &U,                                  \
+           dense_matrix<base_type> &Vtransposed,			\
+	   std::vector<base_type2> &sigma) {				\
+    GMMLAPACK_TRACE("gesvd_interface");					\
+    int m = int(mat_nrows(X)), n = int(mat_ncols(X));			\
+    int mn_min = m < n ? m : n;						\
+    sigma.resize(mn_min);						\
+    std::vector<base_type> work(15 * mn_min);				\
+    std::vector<base_type2> rwork(5 * mn_min);				\
+    int lwork = int(work.size());			       		\
+    resize(U, m, m);							\
+    resize(Vtransposed, n, n);						\
+    char job = 'A';							\
+    int info = -1;							\
+    lapack_name(&job, &job, &m, &n, &X(0,0), &m, &sigma[0], &U(0,0),	\
+		&m, &Vtransposed(0,0), &n, &work[0], &lwork,            \
+		&rwork[0], &info);					\
   }
   
   gesvd_interface(sgesvd_, BLAS_S)
   gesvd_interface(dgesvd_, BLAS_D)
   cgesvd_interface(cgesvd_, BLAS_C, BLAS_S)
   cgesvd_interface(zgesvd_, BLAS_Z, BLAS_D)
-
-  template <typename MAT, typename VEC>
-  void svd(const MAT &X_, MAT &U, MAT &Vtransposed, VEC &sigma) {
-   MAT X(X_);
-   svd(X, U, Vtransposed, sigma);
-  }
+    
     
 
 
 
 }
 
-#else
-
-namespace gmm
-{
-template <typename MAT>
-void schur(const MAT &A_, MAT &S, MAT &Q)
-{
-  GMM_ASSERT1(false, "Use of function schur(A,S,Q) requires GetFEM++ "
-              "to be built with Lapack");
-}
-
-}// namespace gmm
+#endif // GMM_LAPACK_INTERFACE_H
 
 #endif // GMM_USES_LAPACK
-
-#endif // GMM_LAPACK_INTERFACE_H

@@ -1,7 +1,7 @@
 /* -*- c++ -*- (enables emacs c++ mode) */
 /*===========================================================================
  
- Copyright (C) 2002-2015 Yves Renard
+ Copyright (C) 2002-2012 Yves Renard
  
  This file is a part of GETFEM++
  
@@ -124,12 +124,15 @@ namespace gmm {
 # define GMM_ASSERT3(test, errormsg) {}
 #elif !defined(GMM_FULL_NDEBUG)
 # define GMM_ASSERT2(test, errormsg)				        \
-  { if (!(test)) GMM_THROW_(gmm::gmm_error, errormsg); }
+  { if (!(test)) gmm::short_error_throw(__FILE__, __LINE__,		\
+				   GMM_PRETTY_FUNCTION, errormsg); }
 # define GMM_ASSERT3(test, errormsg)				        \
-  { if (!(test)) GMM_THROW_(gmm::gmm_error, errormsg); }
+  { if (!(test)) gmm::short_error_throw(__FILE__, __LINE__,		\
+				   GMM_PRETTY_FUNCTION, errormsg); }
 #else
 # define GMM_ASSERT2(test, errormsg)          				\
-  { if (!(test)) GMM_THROW_(gmm::gmm_error, errormsg); }
+  { if (!(test)) gmm::short_error_throw(__FILE__, __LINE__,		\
+				   GMM_PRETTY_FUNCTION, errormsg); }
 # define GMM_ASSERT3(test, errormsg)
 #endif
 
@@ -208,7 +211,7 @@ namespace gmm {
 
   // This allow not too compile some Warnings
 #ifndef GMM_TRACES_LEVEL
-# define GMM_TRACES_LEVEL 4
+# define GMM_TRACES_LEVEL 3
 #endif
 
   // Traces levels : 0 always printed
