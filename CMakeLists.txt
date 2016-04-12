@@ -22,7 +22,11 @@ IF(MP_USE_MUMPS)
     FIND_PACKAGE(MUMPS REQUIRED)
     include_directories(${MUMPS_INCLUDE_DIRS})
 
-    FIND_PACKAGE(LAPACK REQUIRED)
+    IF(${BLA_VENDOR} MATCHES "OpenBlas")
+    	find_library(LAPACK_LIBRARIES openblas)
+    ELSE()
+    	FIND_PACKAGE(LAPACK REQUIRED)   
+    ENDIF()
 
     add_definitions(-DGMM_USES_LAPACK)  
     add_definitions(-DGMM_USES_MUMPS)
