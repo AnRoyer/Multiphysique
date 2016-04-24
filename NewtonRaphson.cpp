@@ -83,6 +83,12 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     }
     else if(method == PERIODICFLAG)
     {
+        for(unsigned int i = 0; i < nodes.size(); i++)
+        {
+            cout << "\t" << "\t" << qext[i] << "\t" << qint[i] << endl;
+        }
+        cout << endl;
+
         double lx = abs(corner.C2->x - corner.C1->x);
         double ly = abs(corner.C4->y - corner.C1->y);
         double vol = 0.0;//Volume du domaine
@@ -174,7 +180,8 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
             }
 
-            qext[NodesCorresp[border.RightNodes[i]]->num-1] += qint[numNode];
+            qint[NodesCorresp[border.RightNodes[i]]->num-1] += qint[numNode];
+            qext[NodesCorresp[border.RightNodes[i]]->num-1] = 0;
             qext[numNode] = gradAvg_x*lx + theta_k[NodesCorresp[border.RightNodes[i]]->num-1] - theta_k[numNode];
             qint[numNode] = 0;
         }
@@ -199,7 +206,8 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
             }
 
-            qext[NodesCorresp[border.TopNodes[i]]->num-1] += qint[numNode];
+            qint[NodesCorresp[border.TopNodes[i]]->num-1] += qint[numNode];
+            qext[NodesCorresp[border.TopNodes[i]]->num-1] = 0;
             qext[numNode] = gradAvg_y*ly + theta_k[NodesCorresp[border.TopNodes[i]]->num-1] - theta_k[numNode];
             qint[numNode] = 0;
         }
@@ -230,7 +238,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
             {
                 if(region.count(elements[i]->region) == 1 && region[elements[i]->region]->temperature != -1)//If linesRegion contains elements[i]->region
                 {
-                    for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
+                    for(unsigned int j = 0; j < elements[i]->nodes.size(); j ++)
                     {
                         delta_theta_k[elements[i]->nodes[j]->num-1] = 0;
                     }
@@ -486,7 +494,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
             {
                 for(unsigned int j = 0 ; j<2; j++)
                 {
-                    kappa(k,j) = alpha (k,j)*thetam+beta(k,j);
+                    kappa(k,j) = alpha(k,j)*thetam+beta(k,j);
                 }
             }
 

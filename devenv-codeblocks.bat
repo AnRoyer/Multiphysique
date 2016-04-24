@@ -11,13 +11,13 @@
 
 echo setting CodeBlocks environment
 
-set INCLUDE=C:\Users\Boman\devgcc\OpenBLAS-v0.2.14-Win32\include
-set INCLUDE=%INCLUDE%;C:\Users\Boman\devgcc\MUMPS\include
+set INCLUDE=C:\Users\Anthony\Documents\ULg\1er master\Projet Mutiphysique\OpenBLAS-v0.2.14-Win32\include
+set INCLUDE=%INCLUDE%;C:\Users\Anthony\Documents\ULg\1er master\Projet Mutiphysique\MUMPS\include
 
 set PATH=C:\Program Files (x86)\CodeBlocks\MinGW\bin
-set PATH=%PATH%;C:\Users\Boman\devgcc\OpenBLAS-v0.2.14-Win32\bin
+set PATH=%PATH%;C:\Users\Anthony\Documents\ULg\1er master\Projet Mutiphysique\OpenBLAS-v0.2.14-Win32\bin
 set PATH=%PATH%;C:\Program Files (x86)\CMake\bin
-set PATH=%PATH%;C:\Users\Boman\devgcc\MUMPS\bin
+set PATH=%PATH%;C:\Users\Anthony\Documents\ULg\1er master\Projet Mutiphysique\MUMPS\bin
 set PATH=%PATH%;C:\Program Files (x86)\CodeBlocks
 
 %comspec%

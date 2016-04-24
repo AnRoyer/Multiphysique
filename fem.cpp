@@ -139,7 +139,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     f_function(f, nodes, elements, region, type, 0); //dernier paramètre de la fonction f nul =>
 
     //Theta_K and delta_theta_k vector
-    std::vector<double> theta_k(nodes.size(),0);
+    std::vector<double> theta_k(nodes.size(),1);
     std::vector<double> delta_theta_k(nodes.size());
 
 
@@ -170,13 +170,6 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             }
         }
     }
-    else if(method == PERIODICFLAG)
-    {
-        for(unsigned int l = 0; l < nodes.size(); l++)
-        {
-            theta_k[l] = 0;
-        }
-    }
 
     std::vector<double> RHS(nodes.size());//Right Hand Side in Newton Raphson algorithm
     std::vector<double> q_m_x(nodes.size());
@@ -189,6 +182,11 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     //Loop as long as criterion is not respected
     while(Criterion == false)
     {
+        for(unsigned int l = 0; l < nodes.size(); l++)
+        {
+            f[l] = 0;
+        }
+        f_function(f, nodes, elements, region, type, 0); //dernier paramètre de la fonction f nul =>
         //Newton Raphson routine
         NewtonRaphson(nodes, elements, physicals, theta_k, f, method, NodesCorresp, delta_theta_k, region, RHS, corner, border, conditions);
         //Initialize value for normRHS0
@@ -201,7 +199,8 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         iter++;
     }
 
-    Internal_flux(theta_k, region, elements, f, q_m_x, q_m_y);//Chargement de la solution pour la solution du flux
+    std::vector<double> qint(nodes.size());
+    Internal_flux(theta_k, region, elements, qint, q_m_x, q_m_y);//Chargement de la solution pour la solution du flux
 
     //Solution (écriture)
     for(unsigned int i = 0; i < nodes.size(); i++)
