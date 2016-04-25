@@ -15,7 +15,6 @@ using namespace std;
 //type = 0 : thermique, type = 1 = électrique
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux, FemFlag type, FemFlag method, Periodique &conditions)
 {
-   // cout << "In FEM.cpp " << endl;
     //Boundaries
     map<int, Parameter*> region;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
 
@@ -182,11 +181,6 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     //Loop as long as criterion is not respected
     while(Criterion == false)
     {
-        for(unsigned int l = 0; l < nodes.size(); l++)
-        {
-            f[l] = 0;
-        }
-        f_function(f, nodes, elements, region, type, 0); //dernier paramètre de la fonction f nul =>
         //Newton Raphson routine
         NewtonRaphson(nodes, elements, physicals, theta_k, f, method, NodesCorresp, delta_theta_k, region, RHS, corner, border, conditions);
         //Initialize value for normRHS0
@@ -223,24 +217,26 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
     double cons;
     for(unsigned int i = 0; i < elements.size(); i++)
     {
+        if(constantProperty != 0)
+        {
+            cons = constantProperty;
+        }
+        else
+        {
+            if(type == THERMALFLAG)
+            {
+                cons = region[elements[i]->region]->thermalGeneration;
+            }
+            else if(type == ELECTRICFLAG)
+            {
+                cons = region[elements[i]->region]->electricalGeneration;
+            }
+        }
+
+
         if(elements[i]->type == 2)//If triangle
         {
-            if(constantProperty != 0)
-            {
-                cons = constantProperty;
-            }
-            else
-            {
-                if(type == THERMALFLAG)
-                {
-                    cons = region[elements[i]->region]->thermalGeneration;
-                }
-                else if(type == ELECTRICFLAG)
-                {
-                    cons = region[elements[i]->region]->electricalGeneration;
-                }
 
-            }
 
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];
@@ -256,6 +252,27 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
             f[n1->num-1] += cons*J/6;
             f[n2->num-1] += cons*J/6;
             f[n3->num-1] += cons*J/6;
+        }
+        else if(elements[i]->type == 3)//If quad
+        {
+            Node *n1 = elements[i]->nodes[0];
+            Node *n2 = elements[i]->nodes[1];
+            Node *n3 = elements[i]->nodes[2];
+            Node *n4 = elements[i]->nodes[3];
+            double x1 = n1->x;
+            double y1 = n1->y;
+            double x2 = n2->x;
+            double y2 = n2->y;
+            double x3 = n3->x;
+            double y3 = n3->y;
+            double x4 = n4->x;
+            double y4 = n4->y;
+            double intDetJ = (x1*y2)/2 - (x2*y1)/2 - (x1*y4)/2 + (x2*y3)/2 - (x3*y2)/2 + (x4*y1)/2 + (x3*y4)/2 - (x4*y3)/2;
+
+            f[n1->num-1] += cons*intDetJ/4;
+            f[n2->num-1] += cons*intDetJ/4;
+            f[n3->num-1] += cons*intDetJ/4;
+            f[n4->num-1] += cons*intDetJ/4;
         }
     }
 }

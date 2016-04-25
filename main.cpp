@@ -70,7 +70,7 @@ int main(int argc, char **argv)
                 cout << "\t\t|" << parameters[i]->thermalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[0][1] << "|" << endl;
                 cout << "\t\t|" << parameters[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
             }
-            cout << "\t - A heat production of " << parameters[i]->thermalGeneration << " K/s;" << endl;
+            cout << "\t - A heat production of " << parameters[i]->thermalGeneration << " W/m^2;" << endl;
             cout << "\t - A electrical conductivity of :" << endl;
             for(unsigned int j = 0; j < parameters[i]->electricalConductivity.size(); j++)
             {

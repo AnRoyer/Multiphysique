@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cmath>
 #include "gmm/gmm.h"
 #include "gmshio.h"
 #include "physicalio.h"
@@ -83,12 +84,6 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     }
     else if(method == PERIODICFLAG)
     {
-        for(unsigned int i = 0; i < nodes.size(); i++)
-        {
-            cout << "\t" << "\t" << qext[i] << "\t" << qint[i] << endl;
-        }
-        cout << endl;
-
         double lx = abs(corner.C2->x - corner.C1->x);
         double ly = abs(corner.C4->y - corner.C1->y);
         double vol = 0.0;//Volume du domaine
@@ -261,7 +256,6 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &regio
     gmm::dense_matrix<double> alpha(2,2); // matrice alpha
     gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
 
-
 	for(unsigned int i = 0; i < elements.size(); i++)//loop over the elements
     {
         if(elements[i]->type == 2)//If triangle
@@ -377,13 +371,13 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &regio
 
             if(q_m_x.size() != 0 && q_m_y.size() != 0)
             {
-                q_m_x[n1->num-1] -= tmp_vec[0];
-                q_m_x[n2->num-1] -= tmp_vec[0];
-                q_m_x[n3->num-1] -= tmp_vec[0];
+                q_m_x[n1->num-1] = -tmp_vec[0];
+                q_m_x[n2->num-1] = -tmp_vec[0];
+                q_m_x[n3->num-1] = -tmp_vec[0];
 
-                q_m_y[n1->num-1] -= tmp_vec[1];
-                q_m_y[n2->num-1] -= tmp_vec[1];
-                q_m_y[n3->num-1] -= tmp_vec[1];
+                q_m_y[n1->num-1] = -tmp_vec[1];
+                q_m_y[n2->num-1] = -tmp_vec[1];
+                q_m_y[n3->num-1] = -tmp_vec[1];
             }
 
 
@@ -415,7 +409,106 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &regio
                     qint[n3->num-1] += qint_I;
             }//end for
         }//end if element = triangle
+        else if(elements[i]->type == 3)//If quad
+        {
+            Node *n1 = elements[i]->nodes[0];
+            Node *n2 = elements[i]->nodes[1];
+            Node *n3 = elements[i]->nodes[2];
+            Node *n4 = elements[i]->nodes[3];
 
+            double x1 = n1->x;
+            double y1 = n1->y;
+            double x2 = n2->x;
+            double y2 = n2->y;
+            double x3 = n3->x;
+            double y3 = n3->y;
+            double x4 = n4->x;
+            double y4 = n4->y;
+
+            if(region[elements[i]->region]->thermalConductivity[0]->name == "alpha")
+            {
+                alpha(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+                alpha(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+                alpha(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+                alpha(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+            }
+            else if(region[elements[i]->region]->thermalConductivity[1]->name == "alpha")
+            {
+                alpha(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+                alpha(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+                alpha(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+                alpha(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+            }
+
+            if(region[elements[i]->region]->thermalConductivity[0]->name == "beta")
+            {
+                beta(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+                beta(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+                beta(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+                beta(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+            }
+            else if(region[elements[i]->region]->thermalConductivity[1]->name == "beta")
+            {
+                beta(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+                beta(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+                beta(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+                beta(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+            }
+
+            std::vector<double> theta_nodes(4);//Temperature at nodes
+            theta_nodes[0] = theta_k[n1->num-1];
+            theta_nodes[1] = theta_k[n2->num-1];
+            theta_nodes[2] = theta_k[n3->num-1];
+            theta_nodes[3] = theta_k[n4->num-1];
+
+            //Average temperature on the element
+            double thetam = (theta_nodes[1]*((x1*y2)/4 - (x2*y1)/4 - (x1*y3)/4 + (x3*y1)/4 + (x2*y3)/4 - (x3*y2)/4)
+                             + theta_nodes[0]*((x1*y2)/4 - (x2*y1)/4 - (x1*y4)/4 + (x4*y1)/4 + (x2*y4)/4 - (x4*y2)/4)
+                             + theta_nodes[2]*((x1*y3)/4 - (x3*y1)/4 - (x1*y4)/4 + (x4*y1)/4 + (x3*y4)/4 - (x4*y3)/4)
+                             + theta_nodes[3]*((x2*y3)/4 - (x3*y2)/4 - (x2*y4)/4 + (x4*y2)/4 + (x3*y4)/4 - (x4*y3)/4))
+                             /((x1*y2)/2 - (x2*y1)/2 - (x1*y4)/2 + (x2*y3)/2 - (x3*y2)/2 + (x4*y1)/2 + (x3*y4)/2 - (x4*y3)/2);
+
+
+            //Assembly of the conductivity tensor on the element
+            gmm::dense_matrix<double> kappa(2,2);
+
+            for (unsigned int k = 0; k<2;k++)
+            {
+                for(unsigned int j = 0 ; j<2; j++)
+                {
+                    kappa(k,j) = alpha(k,j)*thetam+beta(k,j);
+                }
+            }
+
+            double k11 = kappa(0,0);
+            double k12 = kappa(0,1);
+            double k21 = kappa(1,0);
+            double k22 = kappa(1,1);
+
+            double t1 = theta_nodes[0];
+            double t2 = theta_nodes[1];
+            double t3 = theta_nodes[2];
+            double t4 = theta_nodes[3];
+
+            if(q_m_x.size() != 0 && q_m_y.size() != 0)
+            {
+                q_m_x[n1->num-1] = (k12*t1*x2 - k12*t2*x1 - k12*t1*x4 + k12*t4*x1 + k12*t2*x4 - k12*t4*x2 - k11*t1*y2 + k11*t2*y1 + k11*t1*y4 - k11*t4*y1 - k11*t2*y4 + k11*t4*y2)/(x1*y2 - x2*y1 - x1*y4 + x4*y1 + x2*y4 - x4*y2);
+                q_m_x[n2->num-1] = (k12*t1*x2 - k12*t2*x1 - k12*t1*x3 + k12*t3*x1 + k12*t2*x3 - k12*t3*x2 - k11*t1*y2 + k11*t2*y1 + k11*t1*y3 - k11*t3*y1 - k11*t2*y3 + k11*t3*y2)/(x1*y2 - x2*y1 - x1*y3 + x3*y1 + x2*y3 - x3*y2);
+                q_m_x[n3->num-1] = (k12*t2*x3 - k12*t3*x2 - k12*t2*x4 + k12*t4*x2 + k12*t3*x4 - k12*t4*x3 - k11*t2*y3 + k11*t3*y2 + k11*t2*y4 - k11*t4*y2 - k11*t3*y4 + k11*t4*y3)/(x2*y3 - x3*y2 - x2*y4 + x4*y2 + x3*y4 - x4*y3);
+                q_m_x[n4->num-1] = (k12*t1*x3 - k12*t3*x1 - k12*t1*x4 + k12*t4*x1 + k12*t3*x4 - k12*t4*x3 - k11*t1*y3 + k11*t3*y1 + k11*t1*y4 - k11*t4*y1 - k11*t3*y4 + k11*t4*y3)/(x1*y3 - x3*y1 - x1*y4 + x4*y1 + x3*y4 - x4*y3);
+
+                q_m_y[n1->num-1] = (k22*t1*x2 - k22*t2*x1 - k22*t1*x4 + k22*t4*x1 + k22*t2*x4 - k22*t4*x2 - k21*t1*y2 + k21*t2*y1 + k21*t1*y4 - k21*t4*y1 - k21*t2*y4 + k21*t4*y2)/(x1*y2 - x2*y1 - x1*y4 + x4*y1 + x2*y4 - x4*y2);
+                q_m_y[n2->num-1] = (k22*t1*x2 - k22*t2*x1 - k22*t1*x3 + k22*t3*x1 + k22*t2*x3 - k22*t3*x2 - k21*t1*y2 + k21*t2*y1 + k21*t1*y3 - k21*t3*y1 - k21*t2*y3 + k21*t3*y2)/(x1*y2 - x2*y1 - x1*y3 + x3*y1 + x2*y3 - x3*y2);
+                q_m_y[n3->num-1] = (k22*t2*x3 - k22*t3*x2 - k22*t2*x4 + k22*t4*x2 + k22*t3*x4 - k22*t4*x3 - k21*t2*y3 + k21*t3*y2 + k21*t2*y4 - k21*t4*y2 - k21*t3*y4 + k21*t4*y3)/(x2*y3 - x3*y2 - x2*y4 + x4*y2 + x3*y4 - x4*y3);
+                q_m_y[n4->num-1] = (k22*t1*x3 - k22*t3*x1 - k22*t1*x4 + k22*t4*x1 + k22*t3*x4 - k22*t4*x3 - k21*t1*y3 + k21*t3*y1 + k21*t1*y4 - k21*t4*y1 - k21*t3*y4 + k21*t4*y3)/(x1*y3 - x3*y1 - x1*y4 + x4*y1 + x3*y4 - x4*y3);
+            }
+
+            qint[n1->num-1] += -(k22*t1*x2*x2 + k22*t1*x4*x4 - k22*t3*x2*x2 - k22*t3*x4*x4 + k11*t1*y2*y2 + k11*t1*y4*y4 - k11*t3*y2*y2 - k11*t3*y4*y4 - k22*t2*x1*x2 - 2*k22*t1*x2*x4 + k22*t2*x1*x4 + k22*t2*x2*x3 + k22*t4*x1*x2 - k22*t2*x3*x4 + 2*k22*t3*x2*x4 - k22*t4*x1*x4 - k22*t4*x2*x3 + k22*t4*x3*x4 - k12*t1*x2*y2 + k12*t2*x1*y2 + k12*t1*x2*y4 + k12*t1*x4*y2 - k12*t2*x1*y4 - k12*t2*x3*y2 + k12*t3*x2*y2 - k12*t4*x1*y2 - k12*t1*x4*y4 + k12*t2*x3*y4 - k12*t3*x2*y4 - k12*t3*x4*y2 + k12*t4*x1*y4 + k12*t4*x3*y2 + k12*t3*x4*y4 - k12*t4*x3*y4 - k21*t1*x2*y2 + k21*t2*x2*y1 + k21*t1*x2*y4 + k21*t1*x4*y2 - k21*t2*x2*y3 - k21*t2*x4*y1 + k21*t3*x2*y2 - k21*t4*x2*y1 - k21*t1*x4*y4 + k21*t2*x4*y3 - k21*t3*x2*y4 - k21*t3*x4*y2 + k21*t4*x2*y3 + k21*t4*x4*y1 + k21*t3*x4*y4 - k21*t4*x4*y3 - k11*t2*y1*y2 - 2*k11*t1*y2*y4 + k11*t2*y1*y4 + k11*t2*y2*y3 + k11*t4*y1*y2 - k11*t2*y3*y4 + 2*k11*t3*y2*y4 - k11*t4*y1*y4 - k11*t4*y2*y3 + k11*t4*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            qint[n2->num-1] += -(k22*t2*x1*x1 + k22*t2*x3*x3 - k22*t4*x1*x1 - k22*t4*x3*x3 + k11*t2*y1*y1 + k11*t2*y3*y3 - k11*t4*y1*y1 - k11*t4*y3*y3 - k22*t1*x1*x2 + k22*t1*x1*x4 + k22*t1*x2*x3 - 2*k22*t2*x1*x3 + k22*t3*x1*x2 - k22*t1*x3*x4 - k22*t3*x1*x4 - k22*t3*x2*x3 + 2*k22*t4*x1*x3 + k22*t3*x3*x4 + k12*t1*x2*y1 - k12*t2*x1*y1 - k12*t1*x2*y3 - k12*t1*x4*y1 + k12*t2*x1*y3 + k12*t2*x3*y1 - k12*t3*x2*y1 + k12*t4*x1*y1 + k12*t1*x4*y3 - k12*t2*x3*y3 + k12*t3*x2*y3 + k12*t3*x4*y1 - k12*t4*x1*y3 - k12*t4*x3*y1 - k12*t3*x4*y3 + k12*t4*x3*y3 + k21*t1*x1*y2 - k21*t2*x1*y1 - k21*t1*x1*y4 - k21*t1*x3*y2 + k21*t2*x1*y3 + k21*t2*x3*y1 - k21*t3*x1*y2 + k21*t4*x1*y1 + k21*t1*x3*y4 - k21*t2*x3*y3 + k21*t3*x1*y4 + k21*t3*x3*y2 - k21*t4*x1*y3 - k21*t4*x3*y1 - k21*t3*x3*y4 + k21*t4*x3*y3 - k11*t1*y1*y2 + k11*t1*y1*y4 + k11*t1*y2*y3 - 2*k11*t2*y1*y3 + k11*t3*y1*y2 - k11*t1*y3*y4 - k11*t3*y1*y4 - k11*t3*y2*y3 + 2*k11*t4*y1*y3 + k11*t3*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            qint[n3->num-1] += (k22*t1*x2*x2 + k22*t1*x4*x4 - k22*t3*x2*x2 - k22*t3*x4*x4 + k11*t1*y2*y2 + k11*t1*y4*y4 - k11*t3*y2*y2 - k11*t3*y4*y4 - k22*t2*x1*x2 - 2*k22*t1*x2*x4 + k22*t2*x1*x4 + k22*t2*x2*x3 + k22*t4*x1*x2 - k22*t2*x3*x4 + 2*k22*t3*x2*x4 - k22*t4*x1*x4 - k22*t4*x2*x3 + k22*t4*x3*x4 - k12*t1*x2*y2 + k12*t2*x1*y2 + k12*t1*x2*y4 + k12*t1*x4*y2 - k12*t2*x1*y4 - k12*t2*x3*y2 + k12*t3*x2*y2 - k12*t4*x1*y2 - k12*t1*x4*y4 + k12*t2*x3*y4 - k12*t3*x2*y4 - k12*t3*x4*y2 + k12*t4*x1*y4 + k12*t4*x3*y2 + k12*t3*x4*y4 - k12*t4*x3*y4 - k21*t1*x2*y2 + k21*t2*x2*y1 + k21*t1*x2*y4 + k21*t1*x4*y2 - k21*t2*x2*y3 - k21*t2*x4*y1 + k21*t3*x2*y2 - k21*t4*x2*y1 - k21*t1*x4*y4 + k21*t2*x4*y3 - k21*t3*x2*y4 - k21*t3*x4*y2 + k21*t4*x2*y3 + k21*t4*x4*y1 + k21*t3*x4*y4 - k21*t4*x4*y3 - k11*t2*y1*y2 - 2*k11*t1*y2*y4 + k11*t2*y1*y4 + k11*t2*y2*y3 + k11*t4*y1*y2 - k11*t2*y3*y4 + 2*k11*t3*y2*y4 - k11*t4*y1*y4 - k11*t4*y2*y3 + k11*t4*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            qint[n4->num-1] += (k22*t2*x1*x1 + k22*t2*x3*x3 - k22*t4*x1*x1 - k22*t4*x3*x3 + k11*t2*y1*y1 + k11*t2*y3*y3 - k11*t4*y1*y1 - k11*t4*y3*y3 - k22*t1*x1*x2 + k22*t1*x1*x4 + k22*t1*x2*x3 - 2*k22*t2*x1*x3 + k22*t3*x1*x2 - k22*t1*x3*x4 - k22*t3*x1*x4 - k22*t3*x2*x3 + 2*k22*t4*x1*x3 + k22*t3*x3*x4 + k12*t1*x2*y1 - k12*t2*x1*y1 - k12*t1*x2*y3 - k12*t1*x4*y1 + k12*t2*x1*y3 + k12*t2*x3*y1 - k12*t3*x2*y1 + k12*t4*x1*y1 + k12*t1*x4*y3 - k12*t2*x3*y3 + k12*t3*x2*y3 + k12*t3*x4*y1 - k12*t4*x1*y3 - k12*t4*x3*y1 - k12*t3*x4*y3 + k12*t4*x3*y3 + k21*t1*x1*y2 - k21*t2*x1*y1 - k21*t1*x1*y4 - k21*t1*x3*y2 + k21*t2*x1*y3 + k21*t2*x3*y1 - k21*t3*x1*y2 + k21*t4*x1*y1 + k21*t1*x3*y4 - k21*t2*x3*y3 + k21*t3*x1*y4 + k21*t3*x3*y2 - k21*t4*x1*y3 - k21*t4*x3*y1 - k21*t3*x3*y4 + k21*t4*x3*y3 - k11*t1*y1*y2 + k11*t1*y1*y4 + k11*t1*y2*y3 - 2*k11*t2*y1*y3 + k11*t3*y1*y2 - k11*t1*y3*y4 - k11*t3*y1*y4 - k11*t3*y2*y3 + 2*k11*t4*y1*y3 + k11*t3*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+        }//end if element = quadrangle
 
     }//end loop over the elements
 
@@ -427,17 +520,17 @@ void Internal_flux(std::vector<double> &theta_k, std::map<int,Parameter*> &regio
 void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parameter*> &region, std::vector<Element*> &elements,
                                 gmm::row_matrix< gmm::wsvector<double> > &KT, map<Node*, Node*> &NodesCorresp, std::vector<Node*> &nodes)
 {
-
     gmm::row_matrix< gmm::wsvector<double> > Tmp(nodes.size(), nodes.size());//Temporaray matrix in the building of KT
     gmm::dense_matrix<double> alpha(2,2); // matrice alpha
     gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
-    gmm::dense_matrix<double> Ke_1(3,3); //First term in KT
-    gmm::dense_matrix<double> Ke_2(3,3); //Second term in KT
 
     for(unsigned int i = 0; i < elements.size(); i++)//loop over the elements
     {
         if(elements[i]->type == 2)//If triangle
         {
+            gmm::dense_matrix<double> Ke_1(3,3); //First term in KT
+            gmm::dense_matrix<double> Ke_2(3,3); //Second term in KT
+
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];
             Node *n3 = elements[i]->nodes[2];
@@ -447,7 +540,6 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
             double y2 = n2->y;
             double x3 = n3->x;
             double y3 = n3->y;
-
 
             if(region[elements[i]->region]->thermalConductivity[0]->name == "alpha")
             {
@@ -613,6 +705,163 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
             gmm::clear(Ke_2);
             gmm::clear(tmp_mat);
         }
+        else if(elements[i]->type == 3)//If quad
+        {
+            Node *n1 = elements[i]->nodes[0];
+            Node *n2 = elements[i]->nodes[1];
+            Node *n3 = elements[i]->nodes[2];
+            Node *n4 = elements[i]->nodes[3];
+            double x1 = n1->x;
+            double y1 = n1->y;
+            double x2 = n2->x;
+            double y2 = n2->y;
+            double x3 = n3->x;
+            double y3 = n3->y;
+            double x4 = n4->x;
+            double y4 = n4->y;
+
+            if(region[elements[i]->region]->thermalConductivity[0]->name == "alpha")
+            {
+                alpha(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+                alpha(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+                alpha(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+                alpha(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+            }
+            else if(region[elements[i]->region]->thermalConductivity[1]->name == "alpha")
+            {
+                alpha(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+                alpha(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+                alpha(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+                alpha(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+            }
+
+            if(region[elements[i]->region]->thermalConductivity[0]->name == "beta")
+            {
+                beta(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+                beta(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+                beta(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+                beta(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+            }
+            else if(region[elements[i]->region]->thermalConductivity[1]->name == "beta")
+            {
+                beta(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+                beta(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+                beta(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+                beta(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+            }
+
+            std::vector<double> theta_nodes(4);//Temperature at nodes
+            theta_nodes[0] = theta_k[n1->num-1];
+            theta_nodes[1] = theta_k[n2->num-1];
+            theta_nodes[2] = theta_k[n3->num-1];
+            theta_nodes[3] = theta_k[n4->num-1];
+
+            //Average temperature on the element
+            double thetam = (theta_nodes[1]*((x1*y2)/4 - (x2*y1)/4 - (x1*y3)/4 + (x3*y1)/4 + (x2*y3)/4 - (x3*y2)/4)
+                             + theta_nodes[0]*((x1*y2)/4 - (x2*y1)/4 - (x1*y4)/4 + (x4*y1)/4 + (x2*y4)/4 - (x4*y2)/4)
+                             + theta_nodes[2]*((x1*y3)/4 - (x3*y1)/4 - (x1*y4)/4 + (x4*y1)/4 + (x3*y4)/4 - (x4*y3)/4)
+                             + theta_nodes[3]*((x2*y3)/4 - (x3*y2)/4 - (x2*y4)/4 + (x4*y2)/4 + (x3*y4)/4 - (x4*y3)/4))
+                             /((x1*y2)/2 - (x2*y1)/2 - (x1*y4)/2 + (x2*y3)/2 - (x3*y2)/2 + (x4*y1)/2 + (x3*y4)/2 - (x4*y3)/2);
+
+
+            //Assembly of the conductivity tensor on the element
+            gmm::dense_matrix<double> kappa(2,2);
+
+            for (unsigned int k = 0; k<2;k++)
+            {
+                for(unsigned int j = 0 ; j<2; j++)
+                {
+                    kappa(k,j) = alpha(k,j)*thetam+beta(k,j);
+                }
+            }
+
+            gmm::dense_matrix<double> Ke_1(4,4); //First term in KT
+            gmm::dense_matrix<double> Ke_2(4,4); //Second term in KT
+
+            double a11 = alpha(0,0);
+            double a12 = alpha(0,1);
+            double a21 = alpha(1,0);
+            double a22 = alpha(1,1);
+
+            double k11 = kappa(0,0);
+            double k12 = kappa(0,1);
+            double k21 = kappa(1,0);
+            double k22 = kappa(1,1);
+
+            double t1 = theta_nodes[0];
+            double t2 = theta_nodes[1];
+            double t3 = theta_nodes[2];
+            double t4 = theta_nodes[3];
+
+            Ke_1(0,0) = (a22*t1*x2*x2 + a22*t1*x4*x4 - a22*t3*x2*x2 - a22*t3*x4*x4 + a11*t1*y2*y2 + a11*t1*y4*y4 - a11*t3*y2*y2 - a11*t3*y4*y4 - a22*t2*x1*x2 - 2*a22*t1*x2*x4 + a22*t2*x1*x4 + a22*t2*x2*x3 + a22*t4*x1*x2 - a22*t2*x3*x4 + 2*a22*t3*x2*x4 - a22*t4*x1*x4 - a22*t4*x2*x3 + a22*t4*x3*x4 - a12*t1*x2*y2 + a12*t2*x1*y2 + a12*t1*x2*y4 + a12*t1*x4*y2 - a12*t2*x1*y4 - a12*t2*x3*y2 + a12*t3*x2*y2 - a12*t4*x1*y2 - a12*t1*x4*y4 + a12*t2*x3*y4 - a12*t3*x2*y4 - a12*t3*x4*y2 + a12*t4*x1*y4 + a12*t4*x3*y2 + a12*t3*x4*y4 - a12*t4*x3*y4 - a21*t1*x2*y2 + a21*t2*x2*y1 + a21*t1*x2*y4 + a21*t1*x4*y2 - a21*t2*x2*y3 - a21*t2*x4*y1 + a21*t3*x2*y2 - a21*t4*x2*y1 - a21*t1*x4*y4 + a21*t2*x4*y3 - a21*t3*x2*y4 - a21*t3*x4*y2 + a21*t4*x2*y3 + a21*t4*x4*y1 + a21*t3*x4*y4 - a21*t4*x4*y3 - a11*t2*y1*y2 - 2*a11*t1*y2*y4 + a11*t2*y1*y4 + a11*t2*y2*y3 + a11*t4*y1*y2 - a11*t2*y3*y4 + 2*a11*t3*y2*y4 - a11*t4*y1*y4 - a11*t4*y2*y3 + a11*t4*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(0,1) = (a22*t2*x1*x1 + a22*t2*x3*x3 - a22*t4*x1*x1 - a22*t4*x3*x3 + a11*t2*y1*y1 + a11*t2*y3*y3 - a11*t4*y1*y1 - a11*t4*y3*y3 - a22*t1*x1*x2 + a22*t1*x1*x4 + a22*t1*x2*x3 - 2*a22*t2*x1*x3 + a22*t3*x1*x2 - a22*t1*x3*x4 - a22*t3*x1*x4 - a22*t3*x2*x3 + 2*a22*t4*x1*x3 + a22*t3*x3*x4 + a12*t1*x2*y1 - a12*t2*x1*y1 - a12*t1*x2*y3 - a12*t1*x4*y1 + a12*t2*x1*y3 + a12*t2*x3*y1 - a12*t3*x2*y1 + a12*t4*x1*y1 + a12*t1*x4*y3 - a12*t2*x3*y3 + a12*t3*x2*y3 + a12*t3*x4*y1 - a12*t4*x1*y3 - a12*t4*x3*y1 - a12*t3*x4*y3 + a12*t4*x3*y3 + a21*t1*x1*y2 - a21*t2*x1*y1 - a21*t1*x1*y4 - a21*t1*x3*y2 + a21*t2*x1*y3 + a21*t2*x3*y1 - a21*t3*x1*y2 + a21*t4*x1*y1 + a21*t1*x3*y4 - a21*t2*x3*y3 + a21*t3*x1*y4 + a21*t3*x3*y2 - a21*t4*x1*y3 - a21*t4*x3*y1 - a21*t3*x3*y4 + a21*t4*x3*y3 - a11*t1*y1*y2 + a11*t1*y1*y4 + a11*t1*y2*y3 - 2*a11*t2*y1*y3 + a11*t3*y1*y2 - a11*t1*y3*y4 - a11*t3*y1*y4 - a11*t3*y2*y3 + 2*a11*t4*y1*y3 + a11*t3*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(0,2) = -(a22*t1*x2*x2 + a22*t1*x4*x4 - a22*t3*x2*x2 - a22*t3*x4*x4 + a11*t1*y2*y2 + a11*t1*y4*y4 - a11*t3*y2*y2 - a11*t3*y4*y4 - a22*t2*x1*x2 - 2*a22*t1*x2*x4 + a22*t2*x1*x4 + a22*t2*x2*x3 + a22*t4*x1*x2 - a22*t2*x3*x4 + 2*a22*t3*x2*x4 - a22*t4*x1*x4 - a22*t4*x2*x3 + a22*t4*x3*x4 - a12*t1*x2*y2 + a12*t2*x1*y2 + a12*t1*x2*y4 + a12*t1*x4*y2 - a12*t2*x1*y4 - a12*t2*x3*y2 + a12*t3*x2*y2 - a12*t4*x1*y2 - a12*t1*x4*y4 + a12*t2*x3*y4 - a12*t3*x2*y4 - a12*t3*x4*y2 + a12*t4*x1*y4 + a12*t4*x3*y2 + a12*t3*x4*y4 - a12*t4*x3*y4 - a21*t1*x2*y2 + a21*t2*x2*y1 + a21*t1*x2*y4 + a21*t1*x4*y2 - a21*t2*x2*y3 - a21*t2*x4*y1 + a21*t3*x2*y2 - a21*t4*x2*y1 - a21*t1*x4*y4 + a21*t2*x4*y3 - a21*t3*x2*y4 - a21*t3*x4*y2 + a21*t4*x2*y3 + a21*t4*x4*y1 + a21*t3*x4*y4 - a21*t4*x4*y3 - a11*t2*y1*y2 - 2*a11*t1*y2*y4 + a11*t2*y1*y4 + a11*t2*y2*y3 + a11*t4*y1*y2 - a11*t2*y3*y4 + 2*a11*t3*y2*y4 - a11*t4*y1*y4 - a11*t4*y2*y3 + a11*t4*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(0,3) = -(a22*t2*x1*x1 + a22*t2*x3*x3 - a22*t4*x1*x1 - a22*t4*x3*x3 + a11*t2*y1*y1 + a11*t2*y3*y3 - a11*t4*y1*y1 - a11*t4*y3*y3 - a22*t1*x1*x2 + a22*t1*x1*x4 + a22*t1*x2*x3 - 2*a22*t2*x1*x3 + a22*t3*x1*x2 - a22*t1*x3*x4 - a22*t3*x1*x4 - a22*t3*x2*x3 + 2*a22*t4*x1*x3 + a22*t3*x3*x4 + a12*t1*x2*y1 - a12*t2*x1*y1 - a12*t1*x2*y3 - a12*t1*x4*y1 + a12*t2*x1*y3 + a12*t2*x3*y1 - a12*t3*x2*y1 + a12*t4*x1*y1 + a12*t1*x4*y3 - a12*t2*x3*y3 + a12*t3*x2*y3 + a12*t3*x4*y1 - a12*t4*x1*y3 - a12*t4*x3*y1 - a12*t3*x4*y3 + a12*t4*x3*y3 + a21*t1*x1*y2 - a21*t2*x1*y1 - a21*t1*x1*y4 - a21*t1*x3*y2 + a21*t2*x1*y3 + a21*t2*x3*y1 - a21*t3*x1*y2 + a21*t4*x1*y1 + a21*t1*x3*y4 - a21*t2*x3*y3 + a21*t3*x1*y4 + a21*t3*x3*y2 - a21*t4*x1*y3 - a21*t4*x3*y1 - a21*t3*x3*y4 + a21*t4*x3*y3 - a11*t1*y1*y2 + a11*t1*y1*y4 + a11*t1*y2*y3 - 2*a11*t2*y1*y3 + a11*t3*y1*y2 - a11*t1*y3*y4 - a11*t3*y1*y4 - a11*t3*y2*y3 + 2*a11*t4*y1*y3 + a11*t3*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+            Ke_1(1,0) = (a22*t1*x2*x2 + a22*t1*x4*x4 - a22*t3*x2*x2 - a22*t3*x4*x4 + a11*t1*y2*y2 + a11*t1*y4*y4 - a11*t3*y2*y2 - a11*t3*y4*y4 - a22*t2*x1*x2 - 2*a22*t1*x2*x4 + a22*t2*x1*x4 + a22*t2*x2*x3 + a22*t4*x1*x2 - a22*t2*x3*x4 + 2*a22*t3*x2*x4 - a22*t4*x1*x4 - a22*t4*x2*x3 + a22*t4*x3*x4 - a12*t1*x2*y2 + a12*t2*x1*y2 + a12*t1*x2*y4 + a12*t1*x4*y2 - a12*t2*x1*y4 - a12*t2*x3*y2 + a12*t3*x2*y2 - a12*t4*x1*y2 - a12*t1*x4*y4 + a12*t2*x3*y4 - a12*t3*x2*y4 - a12*t3*x4*y2 + a12*t4*x1*y4 + a12*t4*x3*y2 + a12*t3*x4*y4 - a12*t4*x3*y4 - a21*t1*x2*y2 + a21*t2*x2*y1 + a21*t1*x2*y4 + a21*t1*x4*y2 - a21*t2*x2*y3 - a21*t2*x4*y1 + a21*t3*x2*y2 - a21*t4*x2*y1 - a21*t1*x4*y4 + a21*t2*x4*y3 - a21*t3*x2*y4 - a21*t3*x4*y2 + a21*t4*x2*y3 + a21*t4*x4*y1 + a21*t3*x4*y4 - a21*t4*x4*y3 - a11*t2*y1*y2 - 2*a11*t1*y2*y4 + a11*t2*y1*y4 + a11*t2*y2*y3 + a11*t4*y1*y2 - a11*t2*y3*y4 + 2*a11*t3*y2*y4 - a11*t4*y1*y4 - a11*t4*y2*y3 + a11*t4*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(1,1) = (a22*t2*x1*x1 + a22*t2*x3*x3 - a22*t4*x1*x1 - a22*t4*x3*x3 + a11*t2*y1*y1 + a11*t2*y3*y3 - a11*t4*y1*y1 - a11*t4*y3*y3 - a22*t1*x1*x2 + a22*t1*x1*x4 + a22*t1*x2*x3 - 2*a22*t2*x1*x3 + a22*t3*x1*x2 - a22*t1*x3*x4 - a22*t3*x1*x4 - a22*t3*x2*x3 + 2*a22*t4*x1*x3 + a22*t3*x3*x4 + a12*t1*x2*y1 - a12*t2*x1*y1 - a12*t1*x2*y3 - a12*t1*x4*y1 + a12*t2*x1*y3 + a12*t2*x3*y1 - a12*t3*x2*y1 + a12*t4*x1*y1 + a12*t1*x4*y3 - a12*t2*x3*y3 + a12*t3*x2*y3 + a12*t3*x4*y1 - a12*t4*x1*y3 - a12*t4*x3*y1 - a12*t3*x4*y3 + a12*t4*x3*y3 + a21*t1*x1*y2 - a21*t2*x1*y1 - a21*t1*x1*y4 - a21*t1*x3*y2 + a21*t2*x1*y3 + a21*t2*x3*y1 - a21*t3*x1*y2 + a21*t4*x1*y1 + a21*t1*x3*y4 - a21*t2*x3*y3 + a21*t3*x1*y4 + a21*t3*x3*y2 - a21*t4*x1*y3 - a21*t4*x3*y1 - a21*t3*x3*y4 + a21*t4*x3*y3 - a11*t1*y1*y2 + a11*t1*y1*y4 + a11*t1*y2*y3 - 2*a11*t2*y1*y3 + a11*t3*y1*y2 - a11*t1*y3*y4 - a11*t3*y1*y4 - a11*t3*y2*y3 + 2*a11*t4*y1*y3 + a11*t3*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(1,2) = -(a22*t1*x2*x2 + a22*t1*x4*x4 - a22*t3*x2*x2 - a22*t3*x4*x4 + a11*t1*y2*y2 + a11*t1*y4*y4 - a11*t3*y2*y2 - a11*t3*y4*y4 - a22*t2*x1*x2 - 2*a22*t1*x2*x4 + a22*t2*x1*x4 + a22*t2*x2*x3 + a22*t4*x1*x2 - a22*t2*x3*x4 + 2*a22*t3*x2*x4 - a22*t4*x1*x4 - a22*t4*x2*x3 + a22*t4*x3*x4 - a12*t1*x2*y2 + a12*t2*x1*y2 + a12*t1*x2*y4 + a12*t1*x4*y2 - a12*t2*x1*y4 - a12*t2*x3*y2 + a12*t3*x2*y2 - a12*t4*x1*y2 - a12*t1*x4*y4 + a12*t2*x3*y4 - a12*t3*x2*y4 - a12*t3*x4*y2 + a12*t4*x1*y4 + a12*t4*x3*y2 + a12*t3*x4*y4 - a12*t4*x3*y4 - a21*t1*x2*y2 + a21*t2*x2*y1 + a21*t1*x2*y4 + a21*t1*x4*y2 - a21*t2*x2*y3 - a21*t2*x4*y1 + a21*t3*x2*y2 - a21*t4*x2*y1 - a21*t1*x4*y4 + a21*t2*x4*y3 - a21*t3*x2*y4 - a21*t3*x4*y2 + a21*t4*x2*y3 + a21*t4*x4*y1 + a21*t3*x4*y4 - a21*t4*x4*y3 - a11*t2*y1*y2 - 2*a11*t1*y2*y4 + a11*t2*y1*y4 + a11*t2*y2*y3 + a11*t4*y1*y2 - a11*t2*y3*y4 + 2*a11*t3*y2*y4 - a11*t4*y1*y4 - a11*t4*y2*y3 + a11*t4*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(1,3) = -(a22*t2*x1*x1 + a22*t2*x3*x3 - a22*t4*x1*x1 - a22*t4*x3*x3 + a11*t2*y1*y1 + a11*t2*y3*y3 - a11*t4*y1*y1 - a11*t4*y3*y3 - a22*t1*x1*x2 + a22*t1*x1*x4 + a22*t1*x2*x3 - 2*a22*t2*x1*x3 + a22*t3*x1*x2 - a22*t1*x3*x4 - a22*t3*x1*x4 - a22*t3*x2*x3 + 2*a22*t4*x1*x3 + a22*t3*x3*x4 + a12*t1*x2*y1 - a12*t2*x1*y1 - a12*t1*x2*y3 - a12*t1*x4*y1 + a12*t2*x1*y3 + a12*t2*x3*y1 - a12*t3*x2*y1 + a12*t4*x1*y1 + a12*t1*x4*y3 - a12*t2*x3*y3 + a12*t3*x2*y3 + a12*t3*x4*y1 - a12*t4*x1*y3 - a12*t4*x3*y1 - a12*t3*x4*y3 + a12*t4*x3*y3 + a21*t1*x1*y2 - a21*t2*x1*y1 - a21*t1*x1*y4 - a21*t1*x3*y2 + a21*t2*x1*y3 + a21*t2*x3*y1 - a21*t3*x1*y2 + a21*t4*x1*y1 + a21*t1*x3*y4 - a21*t2*x3*y3 + a21*t3*x1*y4 + a21*t3*x3*y2 - a21*t4*x1*y3 - a21*t4*x3*y1 - a21*t3*x3*y4 + a21*t4*x3*y3 - a11*t1*y1*y2 + a11*t1*y1*y4 + a11*t1*y2*y3 - 2*a11*t2*y1*y3 + a11*t3*y1*y2 - a11*t1*y3*y4 - a11*t3*y1*y4 - a11*t3*y2*y3 + 2*a11*t4*y1*y3 + a11*t3*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+            Ke_1(2,0) = (a22*t1*x2*x2 + a22*t1*x4*x4 - a22*t3*x2*x2 - a22*t3*x4*x4 + a11*t1*y2*y2 + a11*t1*y4*y4 - a11*t3*y2*y2 - a11*t3*y4*y4 - a22*t2*x1*x2 - 2*a22*t1*x2*x4 + a22*t2*x1*x4 + a22*t2*x2*x3 + a22*t4*x1*x2 - a22*t2*x3*x4 + 2*a22*t3*x2*x4 - a22*t4*x1*x4 - a22*t4*x2*x3 + a22*t4*x3*x4 - a12*t1*x2*y2 + a12*t2*x1*y2 + a12*t1*x2*y4 + a12*t1*x4*y2 - a12*t2*x1*y4 - a12*t2*x3*y2 + a12*t3*x2*y2 - a12*t4*x1*y2 - a12*t1*x4*y4 + a12*t2*x3*y4 - a12*t3*x2*y4 - a12*t3*x4*y2 + a12*t4*x1*y4 + a12*t4*x3*y2 + a12*t3*x4*y4 - a12*t4*x3*y4 - a21*t1*x2*y2 + a21*t2*x2*y1 + a21*t1*x2*y4 + a21*t1*x4*y2 - a21*t2*x2*y3 - a21*t2*x4*y1 + a21*t3*x2*y2 - a21*t4*x2*y1 - a21*t1*x4*y4 + a21*t2*x4*y3 - a21*t3*x2*y4 - a21*t3*x4*y2 + a21*t4*x2*y3 + a21*t4*x4*y1 + a21*t3*x4*y4 - a21*t4*x4*y3 - a11*t2*y1*y2 - 2*a11*t1*y2*y4 + a11*t2*y1*y4 + a11*t2*y2*y3 + a11*t4*y1*y2 - a11*t2*y3*y4 + 2*a11*t3*y2*y4 - a11*t4*y1*y4 - a11*t4*y2*y3 + a11*t4*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(2,1) = (a22*t2*x1*x1 + a22*t2*x3*x3 - a22*t4*x1*x1 - a22*t4*x3*x3 + a11*t2*y1*y1 + a11*t2*y3*y3 - a11*t4*y1*y1 - a11*t4*y3*y3 - a22*t1*x1*x2 + a22*t1*x1*x4 + a22*t1*x2*x3 - 2*a22*t2*x1*x3 + a22*t3*x1*x2 - a22*t1*x3*x4 - a22*t3*x1*x4 - a22*t3*x2*x3 + 2*a22*t4*x1*x3 + a22*t3*x3*x4 + a12*t1*x2*y1 - a12*t2*x1*y1 - a12*t1*x2*y3 - a12*t1*x4*y1 + a12*t2*x1*y3 + a12*t2*x3*y1 - a12*t3*x2*y1 + a12*t4*x1*y1 + a12*t1*x4*y3 - a12*t2*x3*y3 + a12*t3*x2*y3 + a12*t3*x4*y1 - a12*t4*x1*y3 - a12*t4*x3*y1 - a12*t3*x4*y3 + a12*t4*x3*y3 + a21*t1*x1*y2 - a21*t2*x1*y1 - a21*t1*x1*y4 - a21*t1*x3*y2 + a21*t2*x1*y3 + a21*t2*x3*y1 - a21*t3*x1*y2 + a21*t4*x1*y1 + a21*t1*x3*y4 - a21*t2*x3*y3 + a21*t3*x1*y4 + a21*t3*x3*y2 - a21*t4*x1*y3 - a21*t4*x3*y1 - a21*t3*x3*y4 + a21*t4*x3*y3 - a11*t1*y1*y2 + a11*t1*y1*y4 + a11*t1*y2*y3 - 2*a11*t2*y1*y3 + a11*t3*y1*y2 - a11*t1*y3*y4 - a11*t3*y1*y4 - a11*t3*y2*y3 + 2*a11*t4*y1*y3 + a11*t3*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(2,2) = -(a22*t1*x2*x2 + a22*t1*x4*x4 - a22*t3*x2*x2 - a22*t3*x4*x4 + a11*t1*y2*y2 + a11*t1*y4*y4 - a11*t3*y2*y2 - a11*t3*y4*y4 - a22*t2*x1*x2 - 2*a22*t1*x2*x4 + a22*t2*x1*x4 + a22*t2*x2*x3 + a22*t4*x1*x2 - a22*t2*x3*x4 + 2*a22*t3*x2*x4 - a22*t4*x1*x4 - a22*t4*x2*x3 + a22*t4*x3*x4 - a12*t1*x2*y2 + a12*t2*x1*y2 + a12*t1*x2*y4 + a12*t1*x4*y2 - a12*t2*x1*y4 - a12*t2*x3*y2 + a12*t3*x2*y2 - a12*t4*x1*y2 - a12*t1*x4*y4 + a12*t2*x3*y4 - a12*t3*x2*y4 - a12*t3*x4*y2 + a12*t4*x1*y4 + a12*t4*x3*y2 + a12*t3*x4*y4 - a12*t4*x3*y4 - a21*t1*x2*y2 + a21*t2*x2*y1 + a21*t1*x2*y4 + a21*t1*x4*y2 - a21*t2*x2*y3 - a21*t2*x4*y1 + a21*t3*x2*y2 - a21*t4*x2*y1 - a21*t1*x4*y4 + a21*t2*x4*y3 - a21*t3*x2*y4 - a21*t3*x4*y2 + a21*t4*x2*y3 + a21*t4*x4*y1 + a21*t3*x4*y4 - a21*t4*x4*y3 - a11*t2*y1*y2 - 2*a11*t1*y2*y4 + a11*t2*y1*y4 + a11*t2*y2*y3 + a11*t4*y1*y2 - a11*t2*y3*y4 + 2*a11*t3*y2*y4 - a11*t4*y1*y4 - a11*t4*y2*y3 + a11*t4*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(2,3) = -(a22*t2*x1*x1 + a22*t2*x3*x3 - a22*t4*x1*x1 - a22*t4*x3*x3 + a11*t2*y1*y1 + a11*t2*y3*y3 - a11*t4*y1*y1 - a11*t4*y3*y3 - a22*t1*x1*x2 + a22*t1*x1*x4 + a22*t1*x2*x3 - 2*a22*t2*x1*x3 + a22*t3*x1*x2 - a22*t1*x3*x4 - a22*t3*x1*x4 - a22*t3*x2*x3 + 2*a22*t4*x1*x3 + a22*t3*x3*x4 + a12*t1*x2*y1 - a12*t2*x1*y1 - a12*t1*x2*y3 - a12*t1*x4*y1 + a12*t2*x1*y3 + a12*t2*x3*y1 - a12*t3*x2*y1 + a12*t4*x1*y1 + a12*t1*x4*y3 - a12*t2*x3*y3 + a12*t3*x2*y3 + a12*t3*x4*y1 - a12*t4*x1*y3 - a12*t4*x3*y1 - a12*t3*x4*y3 + a12*t4*x3*y3 + a21*t1*x1*y2 - a21*t2*x1*y1 - a21*t1*x1*y4 - a21*t1*x3*y2 + a21*t2*x1*y3 + a21*t2*x3*y1 - a21*t3*x1*y2 + a21*t4*x1*y1 + a21*t1*x3*y4 - a21*t2*x3*y3 + a21*t3*x1*y4 + a21*t3*x3*y2 - a21*t4*x1*y3 - a21*t4*x3*y1 - a21*t3*x3*y4 + a21*t4*x3*y3 - a11*t1*y1*y2 + a11*t1*y1*y4 + a11*t1*y2*y3 - 2*a11*t2*y1*y3 + a11*t3*y1*y2 - a11*t1*y3*y4 - a11*t3*y1*y4 - a11*t3*y2*y3 + 2*a11*t4*y1*y3 + a11*t3*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+            Ke_1(3,0) = (a22*t1*x2*x2 + a22*t1*x4*x4 - a22*t3*x2*x2 - a22*t3*x4*x4 + a11*t1*y2*y2 + a11*t1*y4*y4 - a11*t3*y2*y2 - a11*t3*y4*y4 - a22*t2*x1*x2 - 2*a22*t1*x2*x4 + a22*t2*x1*x4 + a22*t2*x2*x3 + a22*t4*x1*x2 - a22*t2*x3*x4 + 2*a22*t3*x2*x4 - a22*t4*x1*x4 - a22*t4*x2*x3 + a22*t4*x3*x4 - a12*t1*x2*y2 + a12*t2*x1*y2 + a12*t1*x2*y4 + a12*t1*x4*y2 - a12*t2*x1*y4 - a12*t2*x3*y2 + a12*t3*x2*y2 - a12*t4*x1*y2 - a12*t1*x4*y4 + a12*t2*x3*y4 - a12*t3*x2*y4 - a12*t3*x4*y2 + a12*t4*x1*y4 + a12*t4*x3*y2 + a12*t3*x4*y4 - a12*t4*x3*y4 - a21*t1*x2*y2 + a21*t2*x2*y1 + a21*t1*x2*y4 + a21*t1*x4*y2 - a21*t2*x2*y3 - a21*t2*x4*y1 + a21*t3*x2*y2 - a21*t4*x2*y1 - a21*t1*x4*y4 + a21*t2*x4*y3 - a21*t3*x2*y4 - a21*t3*x4*y2 + a21*t4*x2*y3 + a21*t4*x4*y1 + a21*t3*x4*y4 - a21*t4*x4*y3 - a11*t2*y1*y2 - 2*a11*t1*y2*y4 + a11*t2*y1*y4 + a11*t2*y2*y3 + a11*t4*y1*y2 - a11*t2*y3*y4 + 2*a11*t3*y2*y4 - a11*t4*y1*y4 - a11*t4*y2*y3 + a11*t4*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(3,1) = (a22*t2*x1*x1 + a22*t2*x3*x3 - a22*t4*x1*x1 - a22*t4*x3*x3 + a11*t2*y1*y1 + a11*t2*y3*y3 - a11*t4*y1*y1 - a11*t4*y3*y3 - a22*t1*x1*x2 + a22*t1*x1*x4 + a22*t1*x2*x3 - 2*a22*t2*x1*x3 + a22*t3*x1*x2 - a22*t1*x3*x4 - a22*t3*x1*x4 - a22*t3*x2*x3 + 2*a22*t4*x1*x3 + a22*t3*x3*x4 + a12*t1*x2*y1 - a12*t2*x1*y1 - a12*t1*x2*y3 - a12*t1*x4*y1 + a12*t2*x1*y3 + a12*t2*x3*y1 - a12*t3*x2*y1 + a12*t4*x1*y1 + a12*t1*x4*y3 - a12*t2*x3*y3 + a12*t3*x2*y3 + a12*t3*x4*y1 - a12*t4*x1*y3 - a12*t4*x3*y1 - a12*t3*x4*y3 + a12*t4*x3*y3 + a21*t1*x1*y2 - a21*t2*x1*y1 - a21*t1*x1*y4 - a21*t1*x3*y2 + a21*t2*x1*y3 + a21*t2*x3*y1 - a21*t3*x1*y2 + a21*t4*x1*y1 + a21*t1*x3*y4 - a21*t2*x3*y3 + a21*t3*x1*y4 + a21*t3*x3*y2 - a21*t4*x1*y3 - a21*t4*x3*y1 - a21*t3*x3*y4 + a21*t4*x3*y3 - a11*t1*y1*y2 + a11*t1*y1*y4 + a11*t1*y2*y3 - 2*a11*t2*y1*y3 + a11*t3*y1*y2 - a11*t1*y3*y4 - a11*t3*y1*y4 - a11*t3*y2*y3 + 2*a11*t4*y1*y3 + a11*t3*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(3,2) = -(a22*t1*x2*x2 + a22*t1*x4*x4 - a22*t3*x2*x2 - a22*t3*x4*x4 + a11*t1*y2*y2 + a11*t1*y4*y4 - a11*t3*y2*y2 - a11*t3*y4*y4 - a22*t2*x1*x2 - 2*a22*t1*x2*x4 + a22*t2*x1*x4 + a22*t2*x2*x3 + a22*t4*x1*x2 - a22*t2*x3*x4 + 2*a22*t3*x2*x4 - a22*t4*x1*x4 - a22*t4*x2*x3 + a22*t4*x3*x4 - a12*t1*x2*y2 + a12*t2*x1*y2 + a12*t1*x2*y4 + a12*t1*x4*y2 - a12*t2*x1*y4 - a12*t2*x3*y2 + a12*t3*x2*y2 - a12*t4*x1*y2 - a12*t1*x4*y4 + a12*t2*x3*y4 - a12*t3*x2*y4 - a12*t3*x4*y2 + a12*t4*x1*y4 + a12*t4*x3*y2 + a12*t3*x4*y4 - a12*t4*x3*y4 - a21*t1*x2*y2 + a21*t2*x2*y1 + a21*t1*x2*y4 + a21*t1*x4*y2 - a21*t2*x2*y3 - a21*t2*x4*y1 + a21*t3*x2*y2 - a21*t4*x2*y1 - a21*t1*x4*y4 + a21*t2*x4*y3 - a21*t3*x2*y4 - a21*t3*x4*y2 + a21*t4*x2*y3 + a21*t4*x4*y1 + a21*t3*x4*y4 - a21*t4*x4*y3 - a11*t2*y1*y2 - 2*a11*t1*y2*y4 + a11*t2*y1*y4 + a11*t2*y2*y3 + a11*t4*y1*y2 - a11*t2*y3*y4 + 2*a11*t3*y2*y4 - a11*t4*y1*y4 - a11*t4*y2*y3 + a11*t4*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_1(3,3) = -(a22*t2*x1*x1 + a22*t2*x3*x3 - a22*t4*x1*x1 - a22*t4*x3*x3 + a11*t2*y1*y1 + a11*t2*y3*y3 - a11*t4*y1*y1 - a11*t4*y3*y3 - a22*t1*x1*x2 + a22*t1*x1*x4 + a22*t1*x2*x3 - 2*a22*t2*x1*x3 + a22*t3*x1*x2 - a22*t1*x3*x4 - a22*t3*x1*x4 - a22*t3*x2*x3 + 2*a22*t4*x1*x3 + a22*t3*x3*x4 + a12*t1*x2*y1 - a12*t2*x1*y1 - a12*t1*x2*y3 - a12*t1*x4*y1 + a12*t2*x1*y3 + a12*t2*x3*y1 - a12*t3*x2*y1 + a12*t4*x1*y1 + a12*t1*x4*y3 - a12*t2*x3*y3 + a12*t3*x2*y3 + a12*t3*x4*y1 - a12*t4*x1*y3 - a12*t4*x3*y1 - a12*t3*x4*y3 + a12*t4*x3*y3 + a21*t1*x1*y2 - a21*t2*x1*y1 - a21*t1*x1*y4 - a21*t1*x3*y2 + a21*t2*x1*y3 + a21*t2*x3*y1 - a21*t3*x1*y2 + a21*t4*x1*y1 + a21*t1*x3*y4 - a21*t2*x3*y3 + a21*t3*x1*y4 + a21*t3*x3*y2 - a21*t4*x1*y3 - a21*t4*x3*y1 - a21*t3*x3*y4 + a21*t4*x3*y3 - a11*t1*y1*y2 + a11*t1*y1*y4 + a11*t1*y2*y3 - 2*a11*t2*y1*y3 + a11*t3*y1*y2 - a11*t1*y3*y4 - a11*t3*y1*y4 - a11*t3*y2*y3 + 2*a11*t4*y1*y3 + a11*t3*y3*y4)/(8*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+
+            Ke_2(0,0) = (k22*x2*x2 + k22*x4*x4 + k11*y2*y2 + k11*y4*y4 - 2*k22*x2*x4 - k12*x2*y2 + k12*x2*y4 + k12*x4*y2 - k12*x4*y4 - k21*x2*y2 + k21*x2*y4 + k21*x4*y2 - k21*x4*y4 - 2*k11*y2*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(0,1) = -(k22*x1*x2 - k22*x1*x4 - k22*x2*x3 + k22*x3*x4 - k12*x2*y1 + k12*x2*y3 + k12*x4*y1 - k12*x4*y3 - k21*x1*y2 + k21*x1*y4 + k21*x3*y2 - k21*x3*y4 + k11*y1*y2 - k11*y1*y4 - k11*y2*y3 + k11*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(0,2) = -(k22*x2*x2 + k22*x4*x4 + k11*y2*y2 + k11*y4*y4 - 2*k22*x2*x4 - k12*x2*y2 + k12*x2*y4 + k12*x4*y2 - k12*x4*y4 - k21*x2*y2 + k21*x2*y4 + k21*x4*y2 - k21*x4*y4 - 2*k11*y2*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(0,3) = (k22*x1*x2 - k22*x1*x4 - k22*x2*x3 + k22*x3*x4 - k12*x2*y1 + k12*x2*y3 + k12*x4*y1 - k12*x4*y3 - k21*x1*y2 + k21*x1*y4 + k21*x3*y2 - k21*x3*y4 + k11*y1*y2 - k11*y1*y4 - k11*y2*y3 + k11*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+            Ke_2(1,0) = -(k22*x1*x2 - k22*x1*x4 - k22*x2*x3 + k22*x3*x4 - k12*x1*y2 + k12*x1*y4 + k12*x3*y2 - k12*x3*y4 - k21*x2*y1 + k21*x2*y3 + k21*x4*y1 - k21*x4*y3 + k11*y1*y2 - k11*y1*y4 - k11*y2*y3 + k11*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(1,1) = (k22*x1*x1 + k22*x3*x3 + k11*y1*y1 + k11*y3*y3 - 2*k22*x1*x3 - k12*x1*y1 + k12*x1*y3 + k12*x3*y1 - k12*x3*y3 - k21*x1*y1 + k21*x1*y3 + k21*x3*y1 - k21*x3*y3 - 2*k11*y1*y3)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(1,2) = (k22*x1*x2 - k22*x1*x4 - k22*x2*x3 + k22*x3*x4 - k12*x1*y2 + k12*x1*y4 + k12*x3*y2 - k12*x3*y4 - k21*x2*y1 + k21*x2*y3 + k21*x4*y1 - k21*x4*y3 + k11*y1*y2 - k11*y1*y4 - k11*y2*y3 + k11*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(1,3) = -(k22*x1*x1 + k22*x3*x3 + k11*y1*y1 + k11*y3*y3 - 2*k22*x1*x3 - k12*x1*y1 + k12*x1*y3 + k12*x3*y1 - k12*x3*y3 - k21*x1*y1 + k21*x1*y3 + k21*x3*y1 - k21*x3*y3 - 2*k11*y1*y3)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+            Ke_2(2,0) = -(k22*x2*x2 + k22*x4*x4 + k11*y2*y2 + k11*y4*y4 - 2*k22*x2*x4 - k12*x2*y2 + k12*x2*y4 + k12*x4*y2 - k12*x4*y4 - k21*x2*y2 + k21*x2*y4 + k21*x4*y2 - k21*x4*y4 - 2*k11*y2*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(2,1) = (k22*x1*x2 - k22*x1*x4 - k22*x2*x3 + k22*x3*x4 - k12*x2*y1 + k12*x2*y3 + k12*x4*y1 - k12*x4*y3 - k21*x1*y2 + k21*x1*y4 + k21*x3*y2 - k21*x3*y4 + k11*y1*y2 - k11*y1*y4 - k11*y2*y3 + k11*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(2,2) = (k22*x2*x2 + k22*x4*x4 + k11*y2*y2 + k11*y4*y4 - 2*k22*x2*x4 - k12*x2*y2 + k12*x2*y4 + k12*x4*y2 - k12*x4*y4 - k21*x2*y2 + k21*x2*y4 + k21*x4*y2 - k21*x4*y4 - 2*k11*y2*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(2,3) = -(k22*x1*x2 - k22*x1*x4 - k22*x2*x3 + k22*x3*x4 - k12*x2*y1 + k12*x2*y3 + k12*x4*y1 - k12*x4*y3 - k21*x1*y2 + k21*x1*y4 + k21*x3*y2 - k21*x3*y4 + k11*y1*y2 - k11*y1*y4 - k11*y2*y3 + k11*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+            Ke_2(3,0) = (k22*x1*x2 - k22*x1*x4 - k22*x2*x3 + k22*x3*x4 - k12*x1*y2 + k12*x1*y4 + k12*x3*y2 - k12*x3*y4 - k21*x2*y1 + k21*x2*y3 + k21*x4*y1 - k21*x4*y3 + k11*y1*y2 - k11*y1*y4 - k11*y2*y3 + k11*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(3,1) = -(k22*x1*x1 + k22*x3*x3 + k11*y1*y1 + k11*y3*y3 - 2*k22*x1*x3 - k12*x1*y1 + k12*x1*y3 + k12*x3*y1 - k12*x3*y3 - k21*x1*y1 + k21*x1*y3 + k21*x3*y1 - k21*x3*y3 - 2*k11*y1*y3)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(3,2) = -(k22*x1*x2 - k22*x1*x4 - k22*x2*x3 + k22*x3*x4 - k12*x1*y2 + k12*x1*y4 + k12*x3*y2 - k12*x3*y4 - k21*x2*y1 + k21*x2*y3 + k21*x4*y1 - k21*x4*y3 + k11*y1*y2 - k11*y1*y4 - k11*y2*y3 + k11*y3*y4)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+            Ke_2(3,3) = (k22*x1*x1 + k22*x3*x3 + k11*y1*y1 + k11*y3*y3 - 2*k22*x1*x3 - k12*x1*y1 + k12*x1*y3 + k12*x3*y1 - k12*x3*y3 - k21*x1*y1 + k21*x1*y3 + k21*x3*y1 - k21*x3*y3 - 2*k11*y1*y3)/(2*(x1*y2 - x2*y1 - x1*y4 + x2*y3 - x3*y2 + x4*y1 + x3*y4 - x4*y3));
+
+            /*Utilisation du mapping NodesCorresp.
+            Si une valeur doit être ajoutée à la ligne d'un noeud de droite, celle-ci est directement ajoutée à la ligne correspondant au noeud de gauche en vis-a-vis*/
+            int num1 = NodesCorresp[n1]->num-1;
+            int num2 = NodesCorresp[n2]->num-1;
+            int num3 = NodesCorresp[n3]->num-1;
+            int num4 = NodesCorresp[n4]->num-1;
+
+            Tmp(num1, n1->num-1) += (Ke_1(0,0) + Ke_2(0,0));
+            Tmp(num1, n2->num-1) += (Ke_1(0,1) + Ke_2(0,1));
+            Tmp(num1, n3->num-1) += (Ke_1(0,2) + Ke_2(0,2));
+            Tmp(num1, n4->num-1) += (Ke_1(0,3) + Ke_2(0,3));
+
+            Tmp(num2, n1->num-1) += (Ke_1(1,0) + Ke_2(1,0));
+            Tmp(num2, n2->num-1) += (Ke_1(1,1) + Ke_2(1,1));
+            Tmp(num2, n3->num-1) += (Ke_1(1,2) + Ke_2(1,2));
+            Tmp(num2, n4->num-1) += (Ke_1(1,3) + Ke_2(1,3));
+
+            Tmp(num3, n1->num-1) += (Ke_1(2,0) + Ke_2(2,0));
+            Tmp(num3, n2->num-1) += (Ke_1(2,1) + Ke_2(2,1));
+            Tmp(num3, n3->num-1) += (Ke_1(2,2) + Ke_2(2,2));
+            Tmp(num3, n4->num-1) += (Ke_1(2,3) + Ke_2(2,3));
+
+            Tmp(num4, n1->num-1) += (Ke_1(3,0) + Ke_2(3,0));
+            Tmp(num4, n2->num-1) += (Ke_1(3,1) + Ke_2(3,1));
+            Tmp(num4, n3->num-1) += (Ke_1(3,2) + Ke_2(3,2));
+            Tmp(num4, n4->num-1) += (Ke_1(3,3) + Ke_2(3,3));
+
+        }//end if element = quadrangle
     }
     //cout << "In Tangent Stiffness Matrix, before copy" << endl;
     gmm::copy(Tmp,KT);
