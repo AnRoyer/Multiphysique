@@ -51,12 +51,13 @@ int main(int argc, char **argv)
 
     vector<Parameter*> parameters;
     Periodique conditions;
-    readPHY(argv[2], parameters, conditions);
+    Type type;
+    readPHY(argv[2], parameters, conditions, &type);
 
 
     for(unsigned int i = 0; i < parameters.size(); i++)
     {
-        if(parameters[i]->dim == 1 && conditions.exist == false)
+        if(parameters[i]->dim == 1 && type == DIRICHLET)
         {
             cout << "Parameter " << parameters[i]->name << " has temperature of " << parameters[i]->temperature << " K and a electrical potential of " << parameters[i]->voltage << " V." << endl;
         }
@@ -92,13 +93,17 @@ int main(int argc, char **argv)
 
     cout << endl << endl;
 
-    if(conditions.exist == true)
+    if(type == PERIODIC)
     {
         fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions);
     }
-    else
+    else if(type == DIRICHLET)
     {
         fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions);
+    }
+    else if(type == VONNEUMANN)
+    {
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions);
     }
 
     writeMSH((char*)"solutionTemperature.pos", solutionTemperature);

@@ -137,32 +137,57 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     vector<double> f(nodes.size());
     f_function(f, nodes, elements, region, type, 0); //dernier paramètre de la fonction f nul =>
 
-    //Theta_K and delta_theta_k vector
+        //Theta_K and delta_theta_k vector
     std::vector<double> theta_k(nodes.size(),1);
     std::vector<double> delta_theta_k(nodes.size());
 
-
-    if(method == DIRICHLETFLAG)//Including the Dirichlet condition on theta_k
+    if(method == VONNEUMANNFLAG)
     {
-        std::vector<double> flag_theta(nodes.size()); //Vector aimed at keeping in mind the allocation
-        double flag = 145;
-
         for(unsigned int l = 0; l < elements.size(); l++)
         {
             if(elements[l]->type == 1)//If line
             {
-                if(region.count(elements[l]->region) == 1)//If linesRegion contains elements[i]->region
+                if(region.count(elements[l]->region) == 1)
+                {
+                    if(region[elements[l]->region]->fluxTemperature != -1)
+                    {
+                        Node *n1 = elements[l]->nodes[0];
+                        Node *n2 = elements[l]->nodes[1];
+
+                        double x1 = n1->x;
+                        double y1 = n1->y;
+                        double x2 = n2->x;
+                        double y2 = n2->y;
+
+                        double longueur = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+
+                        f[elements[l]->nodes[0]->num-1] -= longueur*region[elements[l]->region]->fluxTemperature/2;
+                        f[elements[l]->nodes[1]->num-1] -= longueur*region[elements[l]->region]->fluxTemperature/2;
+                    }
+
+                    if(region[elements[l]->region]->temperature != -1)
+                    {
+                        theta_k[elements[l]->nodes[0]->num-1] = region[elements[l]->region]->temperature;
+                        theta_k[elements[l]->nodes[1]->num-1] = region[elements[l]->region]->temperature;
+                    }
+                }
+            }
+        }
+    }
+
+    if(method == DIRICHLETFLAG)//Including the Dirichlet condition on theta_k
+    {
+        for(unsigned int l = 0; l < elements.size(); l++)
+        {
+            if(elements[l]->type == 1)//If line
+            {
+                if(region.count(elements[l]->region) == 1)
                 {
                     for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
                     {
-                        if(flag_theta[elements[l]->nodes[j]->num-1]!= flag)
+                        if(region[elements[l]->region]->temperature != -1)
                         {
-                            if(region[elements[l]->region]->temperature != -1)
-                            {
-                                theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->temperature;
-                                flag_theta[elements[l]->nodes[j]->num-1]= flag;
-                            }
-
+                            theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->temperature;
                         }
                     }
                 }

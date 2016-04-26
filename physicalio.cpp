@@ -11,7 +11,7 @@ using namespace std;
 
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions)
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Type *typeUsed)
 {
     ifstream fp(fileName);
     if(!fp.is_open())//On verifie que le fichier soit bien ouvert
@@ -99,6 +99,12 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                                 type = PERIODIC;
                                 conditions.exist = true;
                             }
+                            else if(param.value == "vonNeumann")
+                            {
+                                cout << "Reading a periodic phy file ..." << endl;
+                                type = VONNEUMANN;
+                                conditions.exist = false;
+                            }
                             else
                             {
                                 cout << "Error: unknown type" << endl;
@@ -182,17 +188,51 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                 }
                 else if(word == "value" && currentDim == LINE)
                 {
-                    if(currentNature == THERMAL)
+                    if(type == DIRICHLET)
                     {
-                        p->temperature = readValue(fp);
+                        if(currentNature == THERMAL)
+                        {
+                            p->temperature = readValue(fp);
+                        }
+                        else if(currentNature == ELECTRICAL)
+                        {
+                            p->voltage = readValue(fp);
+                        }
+                        else
+                        {
+                           cout << "Error: unknown current nature" << endl;
+                        }
                     }
-                    else if(currentNature == ELECTRICAL)
+                    else if(type == VONNEUMANN)
                     {
-                        p->voltage = readValue(fp);
-                    }
-                    else
-                    {
-                       cout << "Error: unknown current nature" << endl;
+                        XMLparam param1 = readParam(fp);
+
+                        if(currentNature == THERMAL)
+                        {
+                            if(param1.value == "flux")
+                            {
+                                p->fluxTemperature = readValue(fp);
+                            }
+                            else if(param1.value == "reference")
+                            {
+                                p->temperature = readValue(fp);
+                            }
+                        }
+                        else if(currentNature == ELECTRICAL)
+                        {
+                            if(param1.value == "flux")
+                            {
+                                p->fluxVoltage = readValue(fp);
+                            }
+                            else if(param1.value == "reference")
+                            {
+                                p->voltage = readValue(fp);
+                            }
+                        }
+                        else
+                        {
+                           cout << "Error: unknown current nature" << endl;
+                        }
                     }
                 }
                 else if(word == "value" && currentDim == SURFACE)
@@ -338,6 +378,8 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
         }
     }
 
+    *typeUsed = type;
+
     cout << "End of the file reaches" << endl;
 
     fp.close();
@@ -398,7 +440,7 @@ double readValue(ifstream& fp)
 {
     string word;
     char c;
-    double value = 0;
+    double value = -1;
 
     while(true)
     {

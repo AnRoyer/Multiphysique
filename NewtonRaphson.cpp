@@ -82,6 +82,54 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
             }
         }
     }
+    else if(method == VONNEUMANNFLAG)
+    {
+        //Dirichlet conditions in KT_tmp
+        for(unsigned int i = 0; i < elements.size(); i++)
+        {
+            if(elements[i]->type == 1)//If line
+            {
+                if(region.count(elements[i]->region) == 1 && region[elements[i]->region]->temperature != -1)//If linesRegion contains elements[i]->region
+                {
+                    for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
+                    {
+                        for(unsigned int k = 0; k < nodes.size(); k++)
+                        {
+                            if(k == elements[i]->nodes[j]->num-1)
+                            {
+                                KT_tmp(elements[i]->nodes[j]->num-1, k) = 1;
+                            }
+                            else
+                            {
+                                KT_tmp(elements[i]->nodes[j]->num-1, k) = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //Building of the Right Hand Side
+        for (unsigned int i=0 ; i<nodes.size(); i++)
+        {
+            RHS[i] = qint[i]+qext[i];
+        }
+
+        //Including the Dirichlet boundary conditions in RHS
+        for(unsigned int i = 0; i < elements.size(); i++)
+        {
+            if(elements[i]->type == 1)//If line
+            {
+                if(region.count(elements[i]->region) == 1 && region[elements[i]->region]->temperature != -1)//If linesRegion contains elements[i]->region
+                {
+                    for(unsigned int j = 0; j < elements[i]->nodes.size(); j++)
+                    {
+                        RHS[elements[i]->nodes[j]->num-1] = 0;
+                    }
+                }
+            }
+        }
+    }
     else if(method == PERIODICFLAG)
     {
         double lx = abs(corner.C2->x - corner.C1->x);

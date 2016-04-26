@@ -9,7 +9,8 @@ enum FemFlag
     THERMALFLAG,
     ELECTRICFLAG,
     DIRICHLETFLAG,
-    PERIODICFLAG
+    PERIODICFLAG,
+    VONNEUMANNFLAG
 };
 
 struct NodeCorner
