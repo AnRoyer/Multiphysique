@@ -56,14 +56,13 @@ int main(int argc, char **argv)
     map<Node*, vector<double> > solutionTemperature_micro;
     map<Node*, vector<double> > solutionFlux_micro;
 
-
+    Type type;
     vector<Parameter*> parameters_macro;
     vector<Parameter*> parameters_micro;
     Periodique conditions_macro;
     Periodique conditions_micro;
-    readPHY(argv[2], parameters_macro, conditions_macro);
-    readPHY(argv[4], parameters_micro, conditions_micro);
-
+    readPHY(argv[2], parameters_macro, conditions_macro, &type);
+    readPHY(argv[4], parameters_micro, conditions_micro, &type);
 
     cout << "For the macroscopic domain:" << endl;
 
@@ -83,7 +82,9 @@ int main(int argc, char **argv)
                 cout << "\t\t|" << parameters_macro[i]->thermalConductivity[j]->conductivity[0][0] << "\t" << parameters_macro[i]->thermalConductivity[j]->conductivity[0][1] << "|" << endl;
                 cout << "\t\t|" << parameters_macro[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters_macro[i]->thermalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
             }
-            cout << "\t - A heat production of " << parameters_macro[i]->thermalGeneration << " K/s;" << endl;
+
+            cout << "\t - A heat production of " << parameters_macro[i]->thermalGeneration << " W/m^2" << endl;
+
             cout << "\t - A electrical conductivity of :" << endl;
             for(unsigned int j = 0; j < parameters_macro[i]->electricalConductivity.size(); j++)
             {
@@ -104,6 +105,7 @@ int main(int argc, char **argv)
     }
 
     cout << endl << endl;
+
 
     cout << "For the microscopic domain:" << endl;
 
@@ -149,13 +151,17 @@ int main(int argc, char **argv)
 
     //Initial guess of the temperature field, reading macro.msh and macro.phy. The initial guess will correspond to solutionTemperature_macro.pos and will be run in DIRICHLET (see the macro.phy)
     double vol_macro;
-    if(conditions_macro.exist == true)
+    if(type == PERIODIC)
     {
         fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, THERMALFLAG, PERIODICFLAG, conditions_macro);
     }
-    else
+    else if(type == DIRICHLET)
     {
         fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, THERMALFLAG, DIRICHLETFLAG, conditions_macro);
+    }
+    else if(type == VONNEUMANN)
+    {
+        fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, THERMALFLAG, VONNEUMANNFLAG, conditions_macro);
     }
 
     //FE2 method.

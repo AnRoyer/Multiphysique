@@ -1,6 +1,29 @@
 #ifndef PHYSICALIO_H_INCLUDED
 #define PHYSICALIO_H_INCLUDED
 
+enum Type
+{
+    DIRICHLET,
+    PERIODIC,
+    VONNEUMANN,
+    DEFAULTTYPE
+};
+
+enum Nature
+{
+    THERMAL,
+    ELECTRICAL,
+    DEFAULTNATURE
+};
+
+enum Dim
+{
+    LINE,
+    SURFACE,
+    GLOBAL,
+    DEFAULTDIM
+};
+
 //Structure contenant les infos des paramètres du fichier .phy
 struct Conductivity
 {
@@ -10,13 +33,15 @@ struct Conductivity
 
 struct Parameter
 {
-	Parameter() 
+	Parameter()
 	{
 		dim = -1;
 		temperature = -1;
 		voltage = -1;
 		thermalGeneration = -1;
 		electricalGeneration = -1;
+		fluxTemperature = -1;
+		fluxVoltage = -1;
 	}
 
     std::string name;
@@ -24,6 +49,9 @@ struct Parameter
     //line parameters
     double temperature;
     double voltage;
+
+    double fluxTemperature;
+    double fluxVoltage;// **************** A VERIFIER
     //surface parameters
     std::vector<Conductivity*> thermalConductivity;
     std::vector<Conductivity*> electricalConductivity;
@@ -52,29 +80,7 @@ struct XMLparam
     std::string value;
 };
 
-enum Type
-{
-    DIRICHLET,
-    PERIODIC,
-    DEFAULTTYPE
-};
-
-enum Nature
-{
-    THERMAL,
-    ELECTRICAL,
-    DEFAULTNATURE
-};
-
-enum Dim
-{
-    LINE,
-    SURFACE,
-    GLOBAL,
-    DEFAULTDIM
-};
-
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions);
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Type *typeUsed);
 XMLparam readParam(std::ifstream& fp);
 double readValue(std::ifstream& fp);
 
