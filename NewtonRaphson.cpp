@@ -83,9 +83,9 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     }
     else if(method == PERIODICFLAG)
     {
+        double vol=0;
         double lx = abs(corner.C2->x - corner.C1->x);
         double ly = abs(corner.C4->y - corner.C1->y);
-        double vol = 0.0;//Volume du domaine
 
         double Tavg = conditions.meanTemperature;
         double gradAvg_x = conditions.xGradient;
@@ -100,7 +100,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
         for(unsigned int j=0; j<nodes.size(); j++)
         {
             KT_tmp(numC1,j) = c[j];
-            vol += c[j];
+            vol += c[j]; //faux
         }
 
         double somTheta = 0;
@@ -214,10 +214,10 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     //Solving the system
     gmm::copy(KT_tmp, KT);
 #ifdef GMM_USES_MUMPS
-    std::cout << "solving linear system with MUMPS\n";
+    //std::cout << "solving linear system with MUMPS\n";
     gmm::MUMPS_solve(KT, delta_theta_k, RHS);
 #else
-    std::cout << "solving linear system with gmm::lu_solve\n";
+    //std::cout << "solving linear system with gmm::lu_solve\n";
     gmm::lu_solve(KT, delta_theta_k, RHS);
 #endif
 
@@ -615,10 +615,16 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
 bool End_Criterion(std::vector<double> &RHS,double normRHS0)
 {
     //Threshold value
-    double eps = 1e-10;
-
-    cout << "Relative residue = "<<gmm::vect_norm2(RHS)/normRHS0<<endl;
-    if(gmm::vect_norm2(RHS)/normRHS0 >eps)
+    double eps = 1e-3;
+    double criterion = gmm::vect_norm2(RHS);
+    if(normRHS0 > 1e-3)
+    {
+         criterion = criterion/normRHS0;
+    }
+    //cout << criterion << endl;
+    //cout << normRHS0 << " " << gmm::vect_norm2(RHS) << endl;
+    //cout << "Relative residue = "<<gmm::vect_norm2(RHS)/normRHS0<<endl;
+    if(criterion >eps)
         return false;
 
     return true;

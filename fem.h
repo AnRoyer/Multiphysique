@@ -38,4 +38,6 @@ struct NodeBorder
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux, FemFlag type, FemFlag method, Periodique &conditions);
 void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,Parameter*> &region, FemFlag type, int constantProperty);
 
+void Average_flux(std::map<Node*, std::vector<double> > &solutionTemperature, std::map<int,Parameter*> &region, std::vector<Element*> &elements, std::vector<double> &q_Me, double vol);
+
 #endif // FEM_H_INCLUDED
