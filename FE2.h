@@ -6,7 +6,11 @@
 #include "gmshio.h"
 #include "physicalio.h"
 
-void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro, std::vector<Physical*> &physicals_micro, std::vector<Parameter*> &parameters_micro, std::map<Node*, std::vector<double> > &solutionTemperature_micro, std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro, std::vector<Element*> &elements_macro,std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro, std::map<Node*, std::vector<double> > &solutionTemperature_macro);
+void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro, std::vector<Physical*> &physicals_micro,
+         std::vector<Parameter*> &parameters_micro, std::map<Node*, std::vector<double> > &solutionTemperature_micro,
+         std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro,
+         std::vector<Element*> &elements_macro,std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro,
+         std::map<Node*, std::vector<double> > &solutionTemperature_macro, double eps);
 
 void conductivityTensor(std::vector<double> &q, std::vector<double> &gradT, gmm::dense_matrix<double> &kappa);
 

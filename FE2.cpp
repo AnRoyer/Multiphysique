@@ -12,7 +12,11 @@
 
 using namespace std;
 
-void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro, std::vector<Physical*> &physicals_micro, std::vector<Parameter*> &parameters_micro, std::map<Node*, std::vector<double> > &solutionTemperature_micro, std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro, std::vector<Element*> &elements_macro, std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro, std::map<Node*, std::vector<double> > &solutionTemperature_macro)
+void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro, std::vector<Physical*> &physicals_micro,
+         std::vector<Parameter*> &parameters_micro, std::map<Node*, std::vector<double> > &solutionTemperature_micro,
+         std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro,
+         std::vector<Element*> &elements_macro, std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro,
+         std::map<Node*, std::vector<double> > &solutionTemperature_macro, double eps)
 {
 
 //criterion for the overall FEM2 method.
@@ -20,7 +24,7 @@ double criterionFEM2 = 10000; //criterion used for the convergence of the overal
 double criterionFEM2_min = 0.1; //When convergence is reached.
 double criterionFEM0 =0;
 
-// Declarations by Corentin : 
+// Declarations by Corentin :
 
 double T_mean;
 
@@ -29,7 +33,7 @@ double u1, u2, u3; // Nodal temperatures of an element
 gmm::dense_matrix<double> J(2, 2); // Jacobian matrix
 gmm::dense_matrix<double> inverse_J(2, 2); // Its inverse
 double det_J; // Its determinant
-	
+
 std::vector<double> gradPhi1_red(2);
 std::vector<double> gradPhi2_red(2);
 std::vector<double> gradPhi3_red(2);
@@ -46,10 +50,10 @@ gradPhi3_red[1] = 1.0;
 
 std::vector<double> q_Me(2);   // Flux moyen sur l'élément
 
-std::vector<double> gradT(2);// Gradient moyen 
+std::vector<double> gradT(2);// Gradient moyen
 gmm::dense_matrix<double> kappa_e(2,2);// Conductivité élémentaire.
 
-gmm::dense_matrix<double> element_stiffness(3, 3); // Matrix of the elementary stiffness K_e 
+gmm::dense_matrix<double> element_stiffness(3, 3); // Matrix of the elementary stiffness K_e
 gmm::dense_matrix<double> total_stiffness(nodes_macro.size(), nodes_macro.size()); // Matrix of the stiffness for the whole domain K
 
 gmm::dense_matrix<double> a0(2, 2); // kappa_e_e times inverse of J in Eq. (9) of ddl 4 group B
@@ -123,12 +127,12 @@ int i_while =0;
 while(criterionFEM2 > criterionFEM2_min)
 {
     for(unsigned int i = 0; i<elements_macro.size(); i++)
-    {   
+    {
         //cout << i << endl;
         if(elements_macro[i]->type == 2)//If triangle
         {
-            // Obtaining nodes numbers : 
-            
+            // Obtaining nodes numbers :
+
             //cout << "triangle" << endl;
 
             Node *n1 = elements_macro[i]->nodes[0];
@@ -146,11 +150,11 @@ while(criterionFEM2 > criterionFEM2_min)
             num_n1 = n1->num;
             num_n2 = n2->num;
             num_n3 = n3->num;
-	
-	    // Jacobian : 
+
+            // Jacobian :
             J (0, 0) = x2 - x1;
-	    J (0, 1) = y2 - y1;
-	    J (1, 0) = x3 - x1;
+            J (0, 1) = y2 - y1;
+            J (1, 0) = x3 - x1;
             J (1, 1) = y3 - y1;
 
             // Determinant of the Jacobian :
@@ -161,16 +165,16 @@ while(criterionFEM2 > criterionFEM2_min)
             inverse_J(0,1) = 1.0/det_J*(y1-y2);
             inverse_J(1,0) = 1.0/det_J*(x1-x3);
             inverse_J(1,1) = 1.0/det_J*(x2-x1);
-    
+
             // Computation of the gradient of shape functions in the real space :
 
             gmm::mult(inverse_J, gradPhi1_red, gradPhi1);
             gmm::mult(inverse_J, gradPhi2_red, gradPhi2);
             gmm::mult(inverse_J, gradPhi3_red, gradPhi3);
-    
+
             //Mean temperature :
 
-            //Obtaining nodal temperatures : 
+            //Obtaining nodal temperatures :
 
             std::vector<double> sol_u;
             sol_u = solutionTemperature_macro[elements_macro[i] -> nodes[0]];
@@ -182,18 +186,18 @@ while(criterionFEM2 > criterionFEM2_min)
 
             //cout << "u1 u2 u3 " << u1 << " " << u2 << " " << u3 << endl;
             //cout << "num_u1 num_u2 num_u3 " << num_n1 << " " << num_n2 << " " << num_n3 << endl;
-              
-            T_mean = (1.0/3.0)*(u1 + u2 + u3);  
+
+            T_mean = (1.0/3.0)*(u1 + u2 + u3);
             //cout << "t mean " << T_mean << endl;
 
             //cout << T_mean << endl ;
- 
+
             conditions_micro.meanTemperature = T_mean;
             conditions_micro.xGradient = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
-            conditions_micro.yGradient = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];  
+            conditions_micro.yGradient = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
 
-            //cout << conditions_micro.xGradient << endl;           
-    
+            //cout << conditions_micro.xGradient << endl;
+
             gradT[0] = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
             gradT[1] = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
 
@@ -210,18 +214,19 @@ while(criterionFEM2 > criterionFEM2_min)
 
 
 
-            
-            fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro);
+
+            fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro,
+                THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
 
             //cout << "vol_micro =" << vol_micro << endl;
             q_Me[0] = 0.0;
             q_Me[1] = 0.0;
             Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
             //cout << "q_Mex " << q_Me[0] << endl;
-            //cout << "q_Mey " << q_Me[1] << endl;            
-    
+            //cout << "q_Mey " << q_Me[1] << endl;
+
             conductivityTensor(q_Me, gradT, kappa_e);
- 
+
             /*if(i == elements_macro.size()-1){
             for(unsigned int m=0; m<2; m++)
             {
@@ -236,7 +241,7 @@ while(criterionFEM2 > criterionFEM2_min)
             /*kappa_e (0,0) = 50.;
 	    kappa_e (0, 1) = 0.;
 	    kappa_e (1, 0) = 0.;
-	    kappa_e (1, 1) = 50.;*/ 
+	    kappa_e (1, 1) = 50.;*/
 
 
             //cout << endl;
@@ -245,15 +250,15 @@ while(criterionFEM2 > criterionFEM2_min)
             // Computing the elementary stiffness Ke_ij once kappa_e_e is known
 
             gmm::mult(kappa_e, inverse_J, a0);
-    
+
             gmm::mult(a0, gradPhi1_red, a1);
             gmm::mult(a0, gradPhi2_red, a2);
             gmm::mult(a0, gradPhi3_red, a3);
-    
+
             gmm::mult(inverse_J, gradPhi1_red, b1);
             gmm::mult(inverse_J, gradPhi2_red, b2);
             gmm::mult(inverse_J, gradPhi3_red, b3);
-    
+
             double element_stiffness_temp;
             element_stiffness_temp = gmm::vect_sp(a1, b1);
             element_stiffness(0, 0) = element_stiffness_temp;
@@ -273,7 +278,7 @@ while(criterionFEM2 > criterionFEM2_min)
             element_stiffness(2, 1) = element_stiffness_temp;
             element_stiffness_temp = gmm::vect_sp(a3, b3);
             element_stiffness(2, 2) = element_stiffness_temp;
-    
+
             gmm::scale(element_stiffness, 0.5*det_J);
 
 
@@ -326,7 +331,7 @@ while(criterionFEM2 > criterionFEM2_min)
             }
         }
     }
-    
+
     for(unsigned int i = 0; i < elements_macro.size(); i++)
     {
         if(elements_macro[i]->type == 1 && region_macro[elements_macro[i]->region]->temperature != -1)//If line
@@ -343,7 +348,7 @@ while(criterionFEM2 > criterionFEM2_min)
 
     std::vector<double> u_guess_vec(1);
     std::vector<double> u_guess(nodes_macro.size());
-    
+
     for(unsigned int l=0; l<nodes_macro.size(); l++)
     {
         u_guess_vec = solutionTemperature_macro[nodes_macro[l]];
@@ -351,7 +356,7 @@ while(criterionFEM2 > criterionFEM2_min)
         //cout << u_guess[l] << " ";
     }
     //cout << endl;
-    
+
     std::vector<double> error(nodes_macro.size());
     std::vector<double> temporary(nodes_macro.size());
 
@@ -378,7 +383,7 @@ while(criterionFEM2 > criterionFEM2_min)
     criterionFEM2 = gmm::vect_norm2(error);
     if(i_while ==0)
         criterionFEM0 = gmm::vect_norm2(error);
-    
+
     criterionFEM2 = criterionFEM2/criterionFEM0;
     cout << "criterionFEM2 " << criterionFEM2 << endl; //acorriger
     if(criterionFEM2 > criterionFEM2_min)
@@ -402,7 +407,7 @@ while(criterionFEM2 > criterionFEM2_min)
         //cout << endl;
     }
     i_while ++;
-    
+
 }//end while.
 
 }//end function.
@@ -416,10 +421,10 @@ void conductivityTensor(std::vector<double> &q, std::vector<double> &gradT, gmm:
 	std::vector<double> gradT2;
 
 	gradT2 = gradT;
-     
+
 	gmm::scale (gradT2, -1.0);
 
-	// Computation of the norms : 
+	// Computation of the norms :
 
 	double n_gradT2 = gmm::vect_norm2(gradT2);
 
@@ -428,22 +433,22 @@ void conductivityTensor(std::vector<double> &q, std::vector<double> &gradT, gmm:
     	    kappa (0,0) = 0.;
 	    kappa (0, 1) = 0.;
 	    kappa (1, 0) = 0.;
-	    kappa (1, 1) = 0.; 
-            return;       
+	    kappa (1, 1) = 0.;
+            return;
         }
-        
+
 	double n_q = gmm::vect_norm2(q);
 
 	double C = n_q/n_gradT2;
 
-	// Orientation of the opposite of the gradient and the heat flux : 
+	// Orientation of the opposite of the gradient and the heat flux :
 
 	double prod_scal = gmm::vect_sp(q, gradT2);
 
 	//double alpha_gradT2 = atan (gradT2[1]/gradT2[0]);
 	//double alpha_q = atan (q[1]/q[0]);
 
-	
+
 
 	// angle between these vector :
 

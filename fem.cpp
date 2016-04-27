@@ -13,7 +13,9 @@ using namespace std;
 
 
 //type = 0 : thermique, type = 1 = électrique
-void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters, std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux, FemFlag type, FemFlag method, Periodique &conditions)
+void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters,
+         std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux, FemFlag type,
+         FemFlag method, Periodique &conditions, double eps)
 {
     //Boundaries
     map<int, Parameter*> region;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
@@ -214,7 +216,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             normRHS0 = gmm::vect_norm2(RHS);
 
         //Check the convergence criterion
-        Criterion = End_Criterion(RHS,normRHS0);
+        Criterion = End_Criterion(RHS, normRHS0, eps);
         cout << "Iteration number " << iter << endl;
         iter++;
     }

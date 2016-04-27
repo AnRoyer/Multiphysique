@@ -42,18 +42,20 @@ int main(int argc, char **argv)
     vector<Parameter*> parameters;
     Periodique conditions;
     Micro micro;
+    double eps = 0;
 
     Type type_micro;
     vector<Parameter*> parameters_micro;
     Periodique conditions_micro;
     Micro micro_micro;
+    double eps_micro = 0;
 
     //lecture des PHYs
-    readPHY(argv[2], parameters, conditions, micro, &type);
+    readPHY(argv[2], parameters, conditions, micro, type, eps);
 
     if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
     {
-        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, &type_micro);
+        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, type_micro, eps_micro);
     }
 
     vector<Node*> nodes;
@@ -200,23 +202,24 @@ int main(int argc, char **argv)
 
 
     //Initial guess of the temperature field, reading macro.msh and macro.phy. The initial guess will correspond to solutionTemperature_macro.pos and will be run in DIRICHLET (see the macro.phy)
-    if(type == PERIODIC)
+    if(type == PERIODIC || type == FE2withDIRICHLET)
     {
-        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions);
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions, eps);
     }
-    else if(type == DIRICHLET)
+    else if(type == DIRICHLET || type == FE2withVONNEUMANN)
     {
-        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions);
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions, eps);
     }
-    else if(type == VONNEUMANN)
+    else if(type == VONNEUMANN || type == FE2withPERIODIC)
     {
-        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions);
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions, eps);
     }
 
     //FE2 method.
     if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
     {
-        FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, conditions_micro, nodes, elements, physicals, parameters, solutionTemperature);
+        FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro,
+            conditions_micro, nodes, elements, physicals, parameters, solutionTemperature, eps);
     }
 
     writeMSH((char*)"solutionTemperature.pos", solutionTemperature);

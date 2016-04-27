@@ -917,12 +917,11 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
 
 
 /*----------------------END CRITERION ROUTINE---------------------------*/
-bool End_Criterion(std::vector<double> &RHS,double normRHS0)
+bool End_Criterion(std::vector<double> &RHS, double normRHS0 , double eps)
 {
     //Threshold value
-    double eps = 1e-5;
     double criterion = gmm::vect_norm2(RHS);
-    if(normRHS0 > 1e-5)
+    if(normRHS0 > eps)
     {
          criterion = criterion/normRHS0;
     }

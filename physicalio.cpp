@@ -11,7 +11,7 @@ using namespace std;
 
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type *typeUsed)
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type &typeUsed, double &eps)
 {
     ifstream fp(fileName);
     if(!fp.is_open())//On verifie que le fichier soit bien ouvert
@@ -27,6 +27,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
     Type type = DEFAULTTYPE;
     Nature currentNature = DEFAULTNATURE;
     Dim currentDim = DEFAULTDIM;
+    double epsRead = 0;
 
     while(true)
     {
@@ -133,6 +134,10 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         else if(param.name == "microPHY")
                         {
                             micro.filePhy = param.value;
+                        }
+                        else if(param.name == "res")
+                        {
+                            sscanf(param.value.c_str(), "%lf", &epsRead);
                         }
                         else
                         {
@@ -378,7 +383,16 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
         }
     }
 
-    *typeUsed = type;
+    typeUsed = type;
+
+    if(epsRead == 0)
+    {
+        eps = 1e-5;
+    }
+    else
+    {
+        eps = epsRead;
+    }
 
     cout << "End of the file reaches" << endl;
 
