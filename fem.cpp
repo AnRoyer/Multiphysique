@@ -208,14 +208,14 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     {
         //Newton Raphson routine
         NewtonRaphson(nodes, elements, physicals, theta_k, f, method, NodesCorresp, delta_theta_k, region, RHS, corner, border, conditions);
-       
+
         //Initialize value for normRHS0
         if(iter==1)
             normRHS0 = gmm::vect_norm2(RHS);
 
         //Check the convergence criterion
         Criterion = End_Criterion(RHS,normRHS0);
-        //cout<<"Iteration number "<<iter<<endl;
+        cout << "Iteration number " << iter << endl;
         iter++;
     }
 

@@ -11,7 +11,7 @@ using namespace std;
 
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Type *typeUsed)
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type *typeUsed)
 {
     ifstream fp(fileName);
     if(!fp.is_open())//On verifie que le fichier soit bien ouvert
@@ -77,14 +77,10 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
 
                 if(word == "phy")
                 {
-                    if(c == ' ')
-                    {
-                        XMLparam param = readParam(fp);
-                        if(param.name == "NULL")
-                        {
-                            cout << "Error: no type specified" << endl;
-                        }
+                    XMLparam param = readParam(fp);
 
+                    while(param.name != "NULL")
+                    {
                         if(param.name == "type")
                         {
                             if(param.value == "dirichlet")
@@ -101,36 +97,63 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                             }
                             else if(param.value == "vonNeumann")
                             {
-                                cout << "Reading a periodic phy file ..." << endl;
+                                cout << "Reading a von Neumann phy file ..." << endl;
                                 type = VONNEUMANN;
                                 conditions.exist = false;
+                            }
+                            else if(param.value == "fe2D")
+                            {
+                                cout << "Reading a FE2 with dirichlet phy file ..." << endl;
+                                type = FE2withDIRICHLET;
+                                conditions.exist = false;
+                            }
+                            else if(param.value == "fe2V")
+                            {
+                                cout << "Reading a FE2 with von Neumann phy file ..." << endl;
+                                type = FE2withVONNEUMANN;
+                                conditions.exist = false;
+                            }
+                            else if(param.value == "fe2P")
+                            {
+                                cout << "Reading a FE2 with periodic phy file ..." << endl;
+                                type = FE2withPERIODIC;
+                                conditions.exist = true;
                             }
                             else
                             {
                                 cout << "Error: unknown type" << endl;
                             }
+
+                            param = readParam(fp);
+                        }
+                        else if(param.name == "microMSH")
+                        {
+                            micro.fileMsh = param.value;
+                        }
+                        else if(param.name == "microPHY")
+                        {
+                            micro.filePhy = param.value;
                         }
                         else
                         {
                             cout << "Error: unknown parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;
                         }
                     }
-                    else if(c == '>')
+
+                    if(type == DEFAULTTYPE)
                     {
                         cout << "Error: no type specified" << endl;
+                        return;
                     }
                 }
                 else if(word == "line")
                 {
                     currentDim = LINE;
-                    if(c == ' ')
-                    {
-                        XMLparam param = readParam(fp);
-                        if(param.name == "NULL")
-                        {
-                            cout << "Error: no name specified" << endl;
-                        }
 
+                    XMLparam param = readParam(fp);
+
+                    while(param.name != "NULL")
+                    {
                         if(param.name == "name")
                         {
                             p = new Parameter;
@@ -141,23 +164,24 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         {
                             cout << "Error: unknown parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;
                         }
+
+                        param = readParam(fp);
                     }
-                    else if(c == '>')
+
+                    if(p == NULL)
                     {
-                        cout << "Error: no name specified" << endl;
+                        cout << "Error: no name specified for line" << endl;
+                        return;
                     }
                 }
                 else if(word == "surface")
                 {
                     currentDim = SURFACE;
-                    if(c == ' ')
-                    {
-                        XMLparam param = readParam(fp);
-                        if(param.name == "NULL")
-                        {
-                            cout << "Error: no name specified" << endl;
-                        }
 
+                    XMLparam param = readParam(fp);
+
+                    while(param.name != "NULL")
+                    {
                         if(param.name == "name")
                         {
                             p = new Parameter;
@@ -168,10 +192,14 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         {
                             cout << "Error: unknown parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;
                         }
+
+                        param = readParam(fp);
                     }
-                    else if(c == '>')
+
+                    if(p == NULL)
                     {
-                        cout << "Error: no name specified" << endl;
+                        cout << "Error: no name specified for surface" << endl;
+                        return;
                     }
                 }
                 else if(word == "global")
@@ -186,125 +214,109 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                 {
                     currentNature = ELECTRICAL;
                 }
-                else if(word == "value" && currentDim == LINE)
+                else if(word == "value")
                 {
-                    if(type == DIRICHLET)
+                    if(currentDim == LINE)
                     {
-                        if(currentNature == THERMAL)
-                        {
-                            p->temperature = readValue(fp);
-                        }
-                        else if(currentNature == ELECTRICAL)
-                        {
-                            p->voltage = readValue(fp);
-                        }
-                        else
-                        {
-                           cout << "Error: unknown current nature" << endl;
-                        }
-                    }
-                    else if(type == VONNEUMANN)
-                    {
-                        XMLparam param1 = readParam(fp);
+                        XMLparam param = readParam(fp);
 
-                        if(currentNature == THERMAL)
+                        int typeValue = 0;
+                        std::string name;
+
+                        while(param.name != "NULL")
                         {
-                            if(param1.value == "flux")
+                            if(param.value == "reference")
                             {
-                                p->fluxTemperature = readValue(fp);
+                                typeValue = 1;
                             }
-                            else if(param1.value == "reference")
+                            else if(param.value == "flux")
                             {
-                                p->temperature = readValue(fp);
+                                typeValue = 2;
                             }
+
+                            param = readParam(fp);
                         }
-                        else if(currentNature == ELECTRICAL)
+
+                        if(typeValue == 0)
                         {
-                            if(param1.value == "flux")
-                            {
-                                p->fluxVoltage = readValue(fp);
-                            }
-                            else if(param1.value == "reference")
-                            {
-                                p->voltage = readValue(fp);
-                            }
+                            cout << "Error: no type value specified" << endl;
                         }
-                        else
-                        {
-                           cout << "Error: unknown current nature" << endl;
-                        }
-                    }
-                }
-                else if(word == "value" && currentDim == SURFACE)
-                {
-                    XMLparam param1 = readParam(fp);
-                    XMLparam param2 = readParam(fp);
-
-                    XMLparam param;
-                    XMLparam nameParam;
-
-                    if(param1.name == "type")
-                    {
-                        param = param1;
-                    }
-                    else if(param2.name == "type")
-                    {
-                        param = param2;
-                    }
-
-                    if(param1.name == "name")
-                    {
-                        nameParam = param1;
-                    }
-                    else if(param2.name == "name")
-                    {
-                        nameParam = param2;
-                    }
-
-                    if(param.name == "type")
-                    {
-                        if(param.value == "conductivity")
+                        else if(typeValue == 1)
                         {
                             if(currentNature == THERMAL)
                             {
-                                if(nameParam.name == "NULL")
-                                {
-                                    cout << "Error: no name specified" << endl;
-                                }
-
-                                Conductivity* newCond = new Conductivity;
-                                newCond->name = nameParam.value;
-
-                                newCond->conductivity[0][0] = readValue(fp);
-                                newCond->conductivity[0][1] = readValue(fp);
-                                newCond->conductivity[1][0] = readValue(fp);
-                                newCond->conductivity[1][1] = readValue(fp);
-
-                                p->thermalConductivity.push_back(newCond);
+                                p->temperature = readValue(fp);
                             }
                             else if(currentNature == ELECTRICAL)
                             {
-                                if(nameParam.name == "NULL")
-                                {
-                                    cout << "Error: no name specified" << endl;
-                                }
-
-                                Conductivity* newCond = new Conductivity;
-                                newCond->name = nameParam.value;
-
-                                newCond->conductivity[0][0] = readValue(fp);
-                                newCond->conductivity[0][1] = readValue(fp);
-                                newCond->conductivity[1][0] = readValue(fp);
-                                newCond->conductivity[1][1] = readValue(fp);
-
-                                p->electricalConductivity.push_back(newCond);
+                                p->voltage = readValue(fp);
                             }
                             else
                             {
                                cout << "Error: unknown current nature" << endl;
                             }
                         }
-                        else if(param.value == "generation")
+                        else if(typeValue == 2)
+                        {
+                            if(currentNature == THERMAL)
+                            {
+                                p->fluxTemperature = readValue(fp);
+                            }
+                            else if(currentNature == ELECTRICAL)
+                            {
+                                p->fluxVoltage = readValue(fp);
+                            }
+                            else
+                            {
+                               cout << "Error: unknown current nature" << endl;
+                            }
+                        }
+                    }
+                    else if(currentDim == SURFACE)
+                    {
+                        XMLparam param = readParam(fp);
+
+                        int typeValue = 0;
+                        std::string name;
+
+                        while(param.name != "NULL")
+                        {
+                            if(param.name == "type")
+                            {
+                                if(param.value == "conductivity")
+                                {
+                                    typeValue = 1;
+                                }
+                                else if(param.value == "generation")
+                                {
+                                    typeValue = 2;
+                                }
+                            }
+                            else if(param.name == "name")
+                            {
+                                name = param.value;
+                            }
+
+                            param = readParam(fp);
+                        }
+
+                        if(typeValue == 0)
+                        {
+                            cout << "Error: no type value specified" << endl;
+                        }
+                        else if(typeValue == 1)
+                        {
+                            Conductivity* newCond = new Conductivity;
+                            newCond->name = name;
+
+                            newCond->conductivity[0][0] = readValue(fp);
+                            newCond->conductivity[0][1] = readValue(fp);
+                            newCond->conductivity[1][0] = readValue(fp);
+                            newCond->conductivity[1][1] = readValue(fp);
+
+                            p->thermalConductivity.push_back(newCond);
+                        }
+                        else if(typeValue == 2)
                         {
                             if(currentNature == THERMAL)
                             {
@@ -314,19 +326,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                             {
                                 p->electricalGeneration = readValue(fp);
                             }
-                            else
-                            {
-                               cout << "Error: unknown current nature" << endl;
-                            }
                         }
-                        else
-                        {
-                            cout << "Error: unknown value " << param.value << " in parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;
-                        }
-                    }
-                    else
-                    {
-                        cout << "Error: unknown parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;
                     }
                 }
                 else if(word == "mean")

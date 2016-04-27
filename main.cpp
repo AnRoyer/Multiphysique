@@ -32,101 +32,151 @@ int main(int argc, char **argv)
     cout << "\t############################################################" << endl;
     cout << "\t############################################################" << endl << endl << endl;
 
-    if(argc < 5)
+    if(argc < 3)
     {
-        cout << "Usage: " << argv[0] << " macro.msh macro.phy micro.msh micro.phy" << endl;
+        cout << "Usage: " << argv[0] << " file.msh file.phy" << endl;
         return 1;
     }
 
-    vector<Node*> nodes_macro;
+    Type type;
+    vector<Parameter*> parameters;
+    Periodique conditions;
+    Micro micro;
+
+    Type type_micro;
+    vector<Parameter*> parameters_micro;
+    Periodique conditions_micro;
+    Micro micro_micro;
+
+    //lecture des PHYs
+    readPHY(argv[2], parameters, conditions, micro, &type);
+
+    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
+    {
+        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, &type_micro);
+    }
+
+    vector<Node*> nodes;
+    vector<Element*> elements;
+    vector<Physical*> physicals;
+
     vector<Node*> nodes_micro;
-    vector<Element*> elements_macro;
     vector<Element*> elements_micro;
-    vector<Physical*> physicals_macro;
     vector<Physical*> physicals_micro;
+
     //lecture des MSHs
-    readMSH(argv[1], nodes_macro, elements_macro, physicals_macro);
-    readMSH(argv[3], nodes_micro, elements_micro, physicals_micro);
+    readMSH(argv[1], nodes, elements, physicals);
+
+    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
+    {
+        readMSH(micro.fileMsh.c_str(), nodes_micro, elements_micro, physicals_micro);
+    }
 
     //Affichage des infos principales
-    cout << "Read " << nodes_macro.size() << " nodes and " << elements_macro.size() << " elements for the macroscopic domain" << endl << endl;
-    cout << "Read " << nodes_micro.size() << " nodes and " << elements_micro.size() << " elements for the microscopic domain" << endl << endl;
-    map<Node*, vector<double> > solutionTemperature_macro;
-    map<Node*, vector<double> > solutionFlux_macro;
+    cout << "Read " << nodes.size() << " nodes and " << elements.size() << " elements." << endl << endl;
+    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
+    {
+        cout << "Read " << nodes_micro.size() << " nodes and " << elements_micro.size() << " elements for the microscopic domain." << endl << endl;
+    }
+
+    map<Node*, vector<double> > solutionTemperature;
+    map<Node*, vector<double> > solutionFlux;
     map<Node*, vector<double> > solutionTemperature_micro;
     map<Node*, vector<double> > solutionFlux_micro;
 
-    Type type;
-    vector<Parameter*> parameters_macro;
-    vector<Parameter*> parameters_micro;
-    Periodique conditions_macro;
-    Periodique conditions_micro;
-    readPHY(argv[2], parameters_macro, conditions_macro, &type);
-    readPHY(argv[4], parameters_micro, conditions_micro, &type);
-
-    cout << "For the macroscopic domain:" << endl;
-
-    for(unsigned int i = 0; i < parameters_macro.size(); i++)
+    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
     {
-        if(parameters_macro[i]->dim == 1 && conditions_macro.exist == false)
+        cout << "For the macroscopic domain:" << endl;
+    }
+
+    for(unsigned int i = 0; i < parameters.size(); i++)
+    {
+        if(parameters[i]->dim == 1 && (type == DIRICHLET || type == VONNEUMANN || type == FE2withDIRICHLET || type == FE2withVONNEUMANN))
         {
-            cout << "Parameter " << parameters_macro[i]->name << " has temperature of " << parameters_macro[i]->temperature << " K and a electrical potential of " << parameters_macro[i]->voltage << " V." << endl;
-        }
-        else if(parameters_macro[i]->dim == 2)
-        {
-            cout << "Parameter " << parameters_macro[i]->name << " has:" << endl;
-            cout << "\t - A thermal conductivity of :" << endl;
-            for(unsigned int j = 0; j < parameters_macro[i]->thermalConductivity.size(); j++)
+            if(parameters[i]->temperature != -1 && parameters[i]->voltage != -1)
             {
-                cout << "\t\t" << parameters_macro[i]->thermalConductivity[j]->name << " = " << endl;
-                cout << "\t\t|" << parameters_macro[i]->thermalConductivity[j]->conductivity[0][0] << "\t" << parameters_macro[i]->thermalConductivity[j]->conductivity[0][1] << "|" << endl;
-                cout << "\t\t|" << parameters_macro[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters_macro[i]->thermalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
+                cout << "Parameter " << parameters[i]->name << " has temperature of " << parameters[i]->temperature << " K and an electrical potential of " << parameters[i]->voltage << " V." << endl;
+            }
+            else if(parameters[i]->temperature != -1 && parameters[i]->voltage == -1)
+            {
+                cout << "Parameter " << parameters[i]->name << " has temperature of " << parameters[i]->temperature << " K." << endl;
+            }
+            else if(parameters[i]->temperature == -1 && parameters[i]->voltage != -1)
+            {
+                cout << "Parameter " << parameters[i]->name << " has an electrical potential of " << parameters[i]->voltage << " V." << endl;
             }
 
-            cout << "\t - A heat production of " << parameters_macro[i]->thermalGeneration << " W/m^2" << endl;
+            if(parameters[i]->fluxTemperature != -1 && parameters[i]->fluxVoltage != -1)
+            {
+                cout << "Parameter " << parameters[i]->name << " has heat flux of " << parameters[i]->fluxTemperature << " W/m and an electrical flux of " << parameters[i]->fluxVoltage << "." << endl;
+            }
+            else if(parameters[i]->fluxTemperature != -1 && parameters[i]->fluxVoltage == -1)
+            {
+                cout << "Parameter " << parameters[i]->name << " has heat flux of " << parameters[i]->fluxTemperature << " W/m." << endl;
+            }
+            else if(parameters[i]->fluxTemperature == -1 && parameters[i]->fluxVoltage != -1)
+            {
+                cout << "Parameter " << parameters[i]->name << " has an electrical potential of " << parameters[i]->fluxVoltage << "." << endl;
+            }
+        }
+        else if(parameters[i]->dim == 2)
+        {
+            cout << "Parameter " << parameters[i]->name << " has:" << endl;
+
+            cout << "\t - A thermal conductivity [W/mK] of:" << endl;
+            for(unsigned int j = 0; j < parameters[i]->thermalConductivity.size(); j++)
+            {
+                cout << "\t\t" << parameters[i]->thermalConductivity[j]->name << " = " << endl;
+                cout << "\t\t|" << parameters[i]->thermalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[0][1] << "|" << endl;
+                cout << "\t\t|" << parameters[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
+            }
+
+            cout << "\t - A heat production of " << parameters[i]->thermalGeneration << " W/m^2" << endl;
 
             cout << "\t - A electrical conductivity of :" << endl;
-            for(unsigned int j = 0; j < parameters_macro[i]->electricalConductivity.size(); j++)
+            for(unsigned int j = 0; j < parameters[i]->electricalConductivity.size(); j++)
             {
-                cout << "\t\t" << parameters_macro[i]->electricalConductivity[j]->name << " = " << endl;
-                cout << "\t\t|" << parameters_macro[i]->electricalConductivity[j]->conductivity[0][0] << "\t" << parameters_macro[i]->electricalConductivity[j]->conductivity[0][1] << "|" << endl;
-                cout << "\t\t|" << parameters_macro[i]->electricalConductivity[j]->conductivity[1][0] << "\t" << parameters_macro[i]->electricalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
+                cout << "\t\t" << parameters[i]->electricalConductivity[j]->name << " = " << endl;
+                cout << "\t\t|" << parameters[i]->electricalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->electricalConductivity[j]->conductivity[0][1] << "|" << endl;
+                cout << "\t\t|" << parameters[i]->electricalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->electricalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
             }
-            cout << "\t - A change in charge density of " << parameters_macro[i]->electricalGeneration << " A/m^3." << endl;
+            cout << "\t - A change in charge density of " << parameters[i]->electricalGeneration << " A/m^3." << endl;
         }
     }
 
-    if(conditions_macro.exist == true)
+    if(type == PERIODIC || type == FE2withPERIODIC)
     {
-        cout << "There is periodic conditions_macro with:" << endl;
-        cout << "\t - A mean temperature: " << conditions_macro.meanTemperature << endl;
-        cout << "\t - A mean x gradient: " << conditions_macro.xGradient << endl;
-        cout << "\t - A mean y gradient: " << conditions_macro.yGradient << endl;
+        cout << "There is periodic conditions with:" << endl;
+        cout << "\t - A mean temperature: " << conditions.meanTemperature << endl;
+        cout << "\t - A mean x gradient: " << conditions.xGradient << endl;
+        cout << "\t - A mean y gradient: " << conditions.yGradient << endl;
     }
 
     cout << endl << endl;
 
 
-    cout << "For the microscopic domain:" << endl;
+    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
+    {
+        cout << "For the microscopic domain:" << endl;
+    }
 
     for(unsigned int i = 0; i < parameters_micro.size(); i++)
     {
-        if(parameters_micro[i]->dim == 1 && conditions_micro.exist == false)
-        {
-            cout << "Parameter " << parameters_micro[i]->name << " has temperature of " << parameters_micro[i]->temperature << " K and a electrical potential of " << parameters_micro[i]->voltage << " V." << endl;
-        }
-        else if(parameters_micro[i]->dim == 2)
+        if(parameters_micro[i]->dim == 2)
         {
             cout << "Parameter " << parameters_micro[i]->name << " has:" << endl;
-            cout << "\t - A thermal conductivity of :" << endl;
+
+            cout << "\t - A thermal conductivity [W/mK] of:" << endl;
             for(unsigned int j = 0; j < parameters_micro[i]->thermalConductivity.size(); j++)
             {
                 cout << "\t\t" << parameters_micro[i]->thermalConductivity[j]->name << " = " << endl;
                 cout << "\t\t|" << parameters_micro[i]->thermalConductivity[j]->conductivity[0][0] << "\t" << parameters_micro[i]->thermalConductivity[j]->conductivity[0][1] << "|" << endl;
                 cout << "\t\t|" << parameters_micro[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters_micro[i]->thermalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
             }
-            cout << "\t - A heat production of " << parameters_micro[i]->thermalGeneration << " K/s;" << endl;
-            cout << "\t - A electrical conductivity of :" << endl;
+
+            cout << "\t - A heat production of " << parameters_micro[i]->thermalGeneration << " W/m^2;" << endl;
+
+            cout << "\t - A electrical conductivity of:" << endl;
             for(unsigned int j = 0; j < parameters_micro[i]->electricalConductivity.size(); j++)
             {
                 cout << "\t\t" << parameters_micro[i]->electricalConductivity[j]->name << " = " << endl;
@@ -139,7 +189,7 @@ int main(int argc, char **argv)
 
     if(conditions_micro.exist == true)
     {
-        cout << "There is periodic conditions_micro with:" << endl;
+        cout << "There is periodic conditions with:" << endl;
         cout << "\t - A mean temperature: " << conditions_micro.meanTemperature << endl;
         cout << "\t - A mean x gradient: " << conditions_micro.xGradient << endl;
         cout << "\t - A mean y gradient: " << conditions_micro.yGradient << endl;
@@ -150,38 +200,39 @@ int main(int argc, char **argv)
 
 
     //Initial guess of the temperature field, reading macro.msh and macro.phy. The initial guess will correspond to solutionTemperature_macro.pos and will be run in DIRICHLET (see the macro.phy)
-    double vol_macro;
     if(type == PERIODIC)
     {
-        fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, THERMALFLAG, PERIODICFLAG, conditions_macro);
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions);
     }
     else if(type == DIRICHLET)
     {
-        fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, THERMALFLAG, DIRICHLETFLAG, conditions_macro);
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions);
     }
     else if(type == VONNEUMANN)
     {
-        fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, THERMALFLAG, VONNEUMANNFLAG, conditions_macro);
+        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions);
     }
 
     //FE2 method.
-    FE2(nodes_micro,elements_micro,physicals_micro,parameters_micro,solutionTemperature_micro,solutionFlux_micro,conditions_micro,nodes_macro, elements_macro,physicals_macro,parameters_macro,solutionTemperature_macro);
+    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
+    {
+        FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, conditions_micro, nodes, elements, physicals, parameters, solutionTemperature);
+    }
 
-    writeMSH((char*)"solutionTemperature.pos", solutionTemperature_macro);
-    writeMSH((char*)"solutionFlux.pos", solutionFlux_macro);
+    writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
+    writeMSH((char*)"solutionFlux.pos", solutionFlux);
 
-    FILE *fp = fopen("dataMatlabT.dat", "w");
+    /*FILE *fp = fopen("dataMatlabT.dat", "w");
 
-    std::map<Node*, std::vector<double> >::iterator itT = solutionTemperature_macro.begin();
+    std::map<Node*, std::vector<double> >::iterator itT = solutionTemperature.begin();
 
-    for(itT = solutionTemperature_macro.begin(); itT != solutionTemperature_macro.end(); itT++)
+    for(itT = solutionTemperature_macro.begin(); itT != solutionTemperature.end(); itT++)
     {
         fprintf(fp, "%.15f \t %.15f \t %.15f \n", itT->first->x, itT->first->y, itT->second[0]);
     }
 
     fclose(fp);
 
-    /*
     fp = fopen("dataMatlabE.dat", "w");
 
     std::map<Node*, std::vector<double> >::iterator itE = solutionE.begin();

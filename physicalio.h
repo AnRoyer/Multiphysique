@@ -6,6 +6,9 @@ enum Type
     DIRICHLET,
     PERIODIC,
     VONNEUMANN,
+    FE2withDIRICHLET,
+    FE2withVONNEUMANN,
+    FE2withPERIODIC,
     DEFAULTTYPE
 };
 
@@ -74,13 +77,19 @@ struct Periodique
     bool exist;
 };
 
+struct Micro
+{
+    std::string fileMsh;
+    std::string filePhy;
+};
+
 struct XMLparam
 {
     std::string name;
     std::string value;
 };
 
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Type *typeUsed);
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type *typeUsed);
 XMLparam readParam(std::ifstream& fp);
 double readValue(std::ifstream& fp);
 
