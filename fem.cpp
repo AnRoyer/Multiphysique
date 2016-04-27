@@ -217,7 +217,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
         //Check the convergence criterion
         Criterion = End_Criterion(RHS, normRHS0, eps);
-        cout << "Iteration number " << iter << endl;
+        //cout << "Iteration number " << iter << endl;
         iter++;
     }
 

@@ -75,7 +75,8 @@ int main(int argc, char **argv)
     }
 
     //Affichage des infos principales
-    cout << "Read " << nodes.size() << " nodes and " << elements.size() << " elements." << endl << endl;
+    cout << endl;
+    cout << "Read " << nodes.size() << " nodes and " << elements.size() << " elements." << endl;
     if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
     {
         cout << "Read " << nodes_micro.size() << " nodes and " << elements_micro.size() << " elements for the microscopic domain." << endl << endl;
@@ -176,8 +177,6 @@ int main(int argc, char **argv)
                 cout << "\t\t|" << parameters_micro[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters_micro[i]->thermalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
             }
 
-            cout << "\t - A heat production of " << parameters_micro[i]->thermalGeneration << " W/m^2;" << endl;
-
             cout << "\t - A electrical conductivity of:" << endl;
             for(unsigned int j = 0; j < parameters_micro[i]->electricalConductivity.size(); j++)
             {
@@ -185,32 +184,20 @@ int main(int argc, char **argv)
                 cout << "\t\t|" << parameters_micro[i]->electricalConductivity[j]->conductivity[0][0] << "\t" << parameters_micro[i]->electricalConductivity[j]->conductivity[0][1] << "|" << endl;
                 cout << "\t\t|" << parameters_micro[i]->electricalConductivity[j]->conductivity[1][0] << "\t" << parameters_micro[i]->electricalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
             }
-            cout << "\t - A change in charge density of " << parameters_micro[i]->electricalGeneration << " A/m^3." << endl;
         }
     }
-
-    if(conditions_micro.exist == true)
-    {
-        cout << "There is periodic conditions with:" << endl;
-        cout << "\t - A mean temperature: " << conditions_micro.meanTemperature << endl;
-        cout << "\t - A mean x gradient: " << conditions_micro.xGradient << endl;
-        cout << "\t - A mean y gradient: " << conditions_micro.yGradient << endl;
-    }
-
     cout << endl << endl;
 
-
-
     //Initial guess of the temperature field, reading macro.msh and macro.phy. The initial guess will correspond to solutionTemperature_macro.pos and will be run in DIRICHLET (see the macro.phy)
-    if(type == PERIODIC || type == FE2withDIRICHLET)
+    if(type == PERIODIC || type == FE2withPERIODIC)
     {
         fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions, eps);
     }
-    else if(type == DIRICHLET || type == FE2withVONNEUMANN)
+    else if(type == DIRICHLET || type == FE2withDIRICHLET)
     {
         fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions, eps);
     }
-    else if(type == VONNEUMANN || type == FE2withPERIODIC)
+    else if(type == VONNEUMANN || type == FE2withVONNEUMANN)
     {
         fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions, eps);
     }

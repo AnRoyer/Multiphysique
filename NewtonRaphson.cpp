@@ -268,7 +268,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     std::cout << "solving linear system with MUMPS\n";
     gmm::MUMPS_solve(KT, delta_theta_k, RHS);
 #else
-    std::cout << "solving linear system with gmm::lu_solve\n";
+    //std::cout << "solving linear system with gmm::lu_solve\n";
     gmm::lu_solve(KT, delta_theta_k, RHS);
 #endif
 
@@ -927,7 +927,7 @@ bool End_Criterion(std::vector<double> &RHS, double normRHS0 , double eps)
     }
     //cout << criterion << endl;
     //cout << normRHS0 << " " << gmm::vect_norm2(RHS) << endl;
-    cout << "Relative residue = " << gmm::vect_norm2(RHS)/normRHS0 <<endl;
+    //cout << "Relative residue = " << gmm::vect_norm2(RHS)/normRHS0 <<endl;
     if(criterion >eps)
         return false;
 

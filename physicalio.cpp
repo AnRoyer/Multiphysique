@@ -124,8 +124,6 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                             {
                                 cout << "Error: unknown type" << endl;
                             }
-
-                            param = readParam(fp);
                         }
                         else if(param.name == "microMSH")
                         {
@@ -143,6 +141,8 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         {
                             cout << "Error: unknown parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;
                         }
+
+                        param = readParam(fp);
                     }
 
                     if(type == DEFAULTTYPE)
