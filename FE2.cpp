@@ -10,6 +10,8 @@
 #include "gmm/gmm_MUMPS_interface.h"
 #endif
 
+// On va faire du MPI !
+
 using namespace std;
 
 void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro, std::vector<Physical*> &physicals_micro,
