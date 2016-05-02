@@ -210,11 +210,11 @@ while(criterionFEM2 > criterionFEM2_min)
 		        
 		        // Temperatures at these nodes
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[0]];
-			temperaturesSlave[0] = sol_u[0];
+			temperaturesSlave[0] = sol_u_tmp[0];
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[1]];
-			temperaturesSlave[1] = sol_u[0];
+			temperaturesSlave[1] = sol_u_tmp[0];
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
-			temperaturesSlave[2] = sol_u[0];
+			temperaturesSlave[2] = sol_u_tmp[0];
 		        
 			MPI_Send (&numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
 			MPI_Send (&temperaturesSlave[0], 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
