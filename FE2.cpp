@@ -30,17 +30,11 @@ int nbproc, myrank ;
 MPI_Comm_rank( MPI_COMM_WORLD, &myrank);
 MPI_Comm_size( MPI_COMM_WORLD, &nbproc);
 
-if (myrank == 0)
-{
     //criterion for the overall FEM2 method.
     double criterionFEM2 = 10000; //criterion used for the convergence of the overall FEM2 method.
     double criterionFEM2_min = 0.1; //When convergence is reached.
     double criterionFEM0 =0;
-}
-// Declarations by Corentin :
-
-if (myrank != 0)
-{
+    
 	double T_mean;
 	
 	double u1, u2, u3; // Nodal temperatures of an element
@@ -78,10 +72,8 @@ if (myrank != 0)
 	std::vector<double> b1(2); // inverse of J times gradPhi_i
 	std::vector<double> b2(2); // inverse of J times gradPhi_2
 	std::vector<double> b3(2); // inverse of J times gradPhi_3
-	
-	std::map<int, Parameter*> region_micro;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
 
-}
+	std::map<int, Parameter*> region_micro;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
 
 
 if (myrank == 0)
@@ -185,13 +177,13 @@ while(criterionFEM2 > criterionFEM2_min)
 		        
 		        // Temperatures at these nodes
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[0]];
-			temperaturesSlave[0] = sol_u[0];
+			temperaturesSlave[0] = sol_u_tmp[0];
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[1]];
-			temperaturesSlave[1] = sol_u[0];
+			temperaturesSlave[1] = sol_u_tmp[0];
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
-			temperaturesSlave[2] = sol_u[0];
+			temperaturesSlave[2] = sol_u_tmp[0];
 		        
-			MPI_Send (numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (& numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
 			MPI_Send (temperaturesSlave, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 		}
 		// End of initialization
@@ -229,7 +221,7 @@ while(criterionFEM2 > criterionFEM2_min)
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
 			temperaturesSlave[2] = sol_u[0];
 		        
-			MPI_Send (numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (& numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
 			MPI_Send (temperaturesSlave, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 			
 			// Now compute the stiffness matrix with the one sent by the slave
@@ -249,14 +241,17 @@ while(criterionFEM2 > criterionFEM2_min)
 		   then add it to the total stifness matrix and send the finite element number -1 to each slave to tell them their work is finished.
 		*/
 		int nodeFlag = -1;
-		std::vector<double> temperatureFlag(3) = {-1.0, -1.0, -1.0};
+		std::vector<double> temperatureFlag(3);
+		temperatureFlag[0] = -1.0;
+		temperatureFlag[1] = -1.0;
+		temperatureFlag[2] = -1.0;
 		
 		for (p = 1; p <= nbproc - 1; p++)
 		{
 			MPI_Recv (stiffnessMaster, 9, MPI_DOUBLE, p, 39, MPI_COMM_WORLD, & status);
 			MPI_Recv (numNodesMaster, 3, MPI_INT, p, 40, MPI_COMM_WORLD, & status);
 			// Dire aux process que c'est terminé
-			MPI_Send (nodeFlag, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (& nodeFlag, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
 			MPI_Send (temperatureFlag, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 			
 		        total_stiffness(numNodesMaster[0], numNodesMaster[0]) = total_stiffness(numNodesMaster[0], numNodesMaster[0]) + stiffnessMaster [0];
