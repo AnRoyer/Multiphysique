@@ -149,29 +149,29 @@ if (myrank == 0)
 //-----------------DEBUT DE LA BOUCLE A PARALLELISER-------------------------------
 
 int nbElem = elements_macro.size();
+std::vector<double> sol_u_tmp;
+int source;	// Rank of the process sending a submatrix Ke
+int numToSend; // Number of the element to send to the slave. The slave will be responsible for this macroscopic element.
+int numElem; // Contains the number of the finite element associated to the Ke matrix a slave sends.
+std::vector<Node*> nodesSlave(3); // Nodes : pointeur ou pas??? cfr. gmshio.h sinon 3 nodes à la main
+std::vector<int> numNodesSlave(3); // Number of the nodes sent to the slave by the master
+std::vector<int> numNodesMaster(3); // Number of the nodes sent by the slave to the master
+int elementNumber;
+std::vector<double> temperaturesSlave(3); // Temperatures of the nodes sent to the slave
+std::vector<double> stiffnessMaster(9); // Will contain the 9 elements of the submatrice Ke (sent by process source)
 
+int i_while = 0;
 
-
-int i_while =0;
 while(criterionFEM2 > criterionFEM2_min)
 {
-	
 	if (myrank == 0) // Travail du maître
 	{
-		int source;	// Rank of the process sending a submatrix Ke
-		int numToSend; // Number of the element to send to the slave. The slave will be responsible for this macroscopic element.
-		int numElem; // Contains the number of the finite element associated to the Ke matrix a slave sends.
-		std::vector<Node*> nodesSlave(3); // Nodes : pointeur ou pas??? cfr. gmshio.h sinon 3 nodes à la main
-		std::vector<int> numNodesSlave(3); // Number of the nodes sent to the slave by the master
-		std::vector<int> numNodesMaster(3); // Number of the nodes sent by the slave to the master
-		std::vector<double> temperaturesSlave(3); // Temperatures of the nodes sent to the slave
-		std::vector<double> stiffnessReceived(9); // Will contain the 9 elements of the submatrice Ke (sent by process source)
 		
 		// INITIALIZATION : Now an element number is sent to each slave, so that all the slaves are busy at the beginning.
 		int p; // Process number
 		for (p = 1; p <= nbproc-1; p++)
 		{
-			numToSend = p - 1; // Process 0 will be busy with finite element 0,...
+				numToSend = p - 1; // Process 0 will be busy with finite element 0,...
 	    		
 	    		// Nodes of the elements
 	    		nodesSlave[0] = elements_macro[numToSend]->nodes[0];
@@ -179,12 +179,11 @@ while(criterionFEM2 > criterionFEM2_min)
         		nodesSlave[2] = elements_macro[numToSend]->nodes[2];
         		
         		// Numbers of these nodes
-		        numNodesSlave[0] = nSlave1->num;
-		        numNodesSlave[1] = nSlave2->num;
-		        numNodesSlave[2] = nSlave3->num;
+		        numNodesSlave[0] = nodesSlave[0]->num;
+		        numNodesSlave[1] = nodesSlave[1]->num;
+		        numNodesSlave[2] = nodesSlave[2]->num;
 		        
 		        // Temperatures at these nodes
-			std::vector<double> ;
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[0]];
 			temperaturesSlave[0] = sol_u[0];
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[1]];
@@ -192,8 +191,8 @@ while(criterionFEM2 > criterionFEM2_min)
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
 			temperaturesSlave[2] = sol_u[0];
 		        
-			MPI_Send (numNodesSlave, 3, MPI_INT, p, 38, MPI_COMM_WORLD);
-			MPI_Send (temperaturesSlave, 3, MPI_INT, p, 42, MPI_COMM_WORLD);
+			MPI_Send (numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (temperaturesSlave, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 		}
 		// End of initialization
 		
@@ -204,7 +203,7 @@ while(criterionFEM2 > criterionFEM2_min)
 		for (int i = nbproc - 1; i < nbElem; i++)
 		{
 			// Reception d'une sous matrice de la part d'un process a priori inconnu :
-			MPI_Recv (stiffnessReceived, 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
+			MPI_Recv (stiffnessMaster, 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
 			source = status.MPI_SOURCE;
 			// Réception des noeuds correspondants
 			MPI_Recv (numNodesMaster, 3, MPI_INT, source, 40, MPI_COMM_WORLD, & status);
@@ -218,12 +217,11 @@ while(criterionFEM2 > criterionFEM2_min)
         		nodesSlave[2] = elements_macro[numToSend]->nodes[2];
         		
         		// Numbers of these nodes
-		        numNodesSlave[0] = nSlave1->num;
-		        numNodesSlave[1] = nSlave2->num;
-		        numNodesSlave[2] = nSlave3->num;
+		        numNodesSlave[0] = nodesSlave[0]->num;
+		        numNodesSlave[1] = nodesSlave[1]->num;
+		        numNodesSlave[2] = nodesSlave[2]->num;
 		        
 		        // Temperatures at these nodes
-			std::vector<double> ;
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[0]];
 			temperaturesSlave[0] = sol_u[0];
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[1]];
@@ -231,75 +229,68 @@ while(criterionFEM2 > criterionFEM2_min)
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
 			temperaturesSlave[2] = sol_u[0];
 		        
-			MPI_Send (numNodesSlave, 3, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
 			MPI_Send (temperaturesSlave, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 			
 			// Now compute the stiffness matrix with the one sent by the slave
-		        total_stiffness(numNodesMaster[0], numNodesMaster[0]) = total_stiffness(numNodesMaster[0], numNodesMaster[0]) + received [0];
-		        total_stiffness(numNodesMaster[0], numNodesMaster[1]) = total_stiffness(numNodesMaster[0], numNodesMaster[1]) + received [1];
-		        total_stiffness(numNodesMaster[0], numNodesMaster[2]) = total_stiffness(numNodesMaster[0], numNodesMaster[2]) + received [2];
-		        total_stiffness(numNodesMaster[1], numNodesMaster[0]) = total_stiffness(numNodesMaster[1], numNodesMaster[0]) + received [3];
-		        total_stiffness(numNodesMaster[1], numNodesMaster[1]) = total_stiffness(numNodesMaster[1], numNodesMaster[1]) + received [4];
-		        total_stiffness(numNodesMaster[1], numNodesMaster[2]) = total_stiffness(numNodesMaster[1], numNodesMaster[2]) + received [5];
-		        total_stiffness(numNodesMaster[2], numNodesMaster[0]) = total_stiffness(numNodesMaster[2], numNodesMaster[0]) + received [6];
-		        total_stiffness(numNodesMaster[2], numNodesMaster[1]) = total_stiffness(numNodesMaster[2], numNodesMaster[1]) + received [7];
-		        total_stiffness(numNodesMaster[2], numNodesMaster[2]) = total_stiffness(numNodesMaster[2], numNodesMaster[2]) + received [8];
+		        total_stiffness(numNodesMaster[0], numNodesMaster[0]) = total_stiffness(numNodesMaster[0], numNodesMaster[0]) + stiffnessMaster [0];
+		        total_stiffness(numNodesMaster[0], numNodesMaster[1]) = total_stiffness(numNodesMaster[0], numNodesMaster[1]) + stiffnessMaster [1];
+		        total_stiffness(numNodesMaster[0], numNodesMaster[2]) = total_stiffness(numNodesMaster[0], numNodesMaster[2]) + stiffnessMaster [2];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[0]) = total_stiffness(numNodesMaster[1], numNodesMaster[0]) + stiffnessMaster [3];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[1]) = total_stiffness(numNodesMaster[1], numNodesMaster[1]) + stiffnessMaster [4];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[2]) = total_stiffness(numNodesMaster[1], numNodesMaster[2]) + stiffnessMaster [5];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[0]) = total_stiffness(numNodesMaster[2], numNodesMaster[0]) + stiffnessMaster [6];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[1]) = total_stiffness(numNodesMaster[2], numNodesMaster[1]) + stiffnessMaster [7];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[2]) = total_stiffness(numNodesMaster[2], numNodesMaster[2]) + stiffnessMaster [8];
 	
 		}
 		
 		/* Now the last element matrices have been "ordered", on need to wait that each of the slaves gives backs its Ke matrix,
 		   then add it to the total stifness matrix and send the finite element number -1 to each slave to tell them their work is finished.
 		*/
-		int flag = -1;
+		int nodeFlag = -1;
+		std::vector<double> temperatureFlag(3) = {-1.0, -1.0, -1.0};
+		
 		for (p = 1; p <= nbproc - 1; p++)
 		{
-			MPI_Recv (received, 4, MPI_DOUBLE, p, 39, MPI_COMM_WORLD, & status);
-			MPI_Recv (& numElem, 1, MPI_INT, p, 40, MPI_COMM_WORLD, & status);
-			// Dire aux process que c'est terminé : 
-			MPI_Send (& flag, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
-	
-	
-		// Ajout de la sous matrice recue à la matrice K :
-		// First obtain the nodes  :
-	    	Node *n1 = elements_macro[numElem]->nodes[0];
-	        Node *n2 = elements_macro[numElem]->nodes[1];
-	        Node *n3 = elements_macro[numElem]->nodes[2];
-		
-		// Then their numbers :
-		int num_n1,num_n2,num_n3;
-	        num_n1 = n1->num;
-	        num_n2 = n2->num;
-	        num_n3 = n3->num;
+			MPI_Recv (stiffnessMaster, 9, MPI_DOUBLE, p, 39, MPI_COMM_WORLD, & status);
+			MPI_Recv (numNodesMaster, 3, MPI_INT, p, 40, MPI_COMM_WORLD, & status);
+			// Dire aux process que c'est terminé
+			MPI_Send (nodeFlag, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (temperatureFlag, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 			
-		
-	        total_stiffness(num_n1-1, num_n1-1) = total_stiffness(num_n1-1, num_n1-1) + received [0];
-	        total_stiffness(num_n1-1, num_n2-1) = total_stiffness(num_n1-1, num_n2-1) + received [1];
-	        total_stiffness(num_n1-1, num_n3-1) = total_stiffness(num_n1-1, num_n3-1) + received [2];
-	        total_stiffness(num_n2-1, num_n1-1) = total_stiffness(num_n2-1, num_n1-1) + received [3];
-	        total_stiffness(num_n2-1, num_n2-1) = total_stiffness(num_n2-1, num_n2-1) + received [4];
-	        total_stiffness(num_n2-1, num_n3-1) = total_stiffness(num_n2-1, num_n3-1) + received [5];
-	        total_stiffness(num_n3-1, num_n1-1) = total_stiffness(num_n3-1, num_n1-1) + received [6];
-	        total_stiffness(num_n3-1, num_n2-1) = total_stiffness(num_n3-1, num_n2-1) + received [7];
-	        total_stiffness(num_n3-1, num_n3-1) = total_stiffness(num_n3-1, num_n3-1) + received [8];
+		        total_stiffness(numNodesMaster[0], numNodesMaster[0]) = total_stiffness(numNodesMaster[0], numNodesMaster[0]) + stiffnessMaster [0];
+		        total_stiffness(numNodesMaster[0], numNodesMaster[1]) = total_stiffness(numNodesMaster[0], numNodesMaster[1]) + stiffnessMaster [1];
+		        total_stiffness(numNodesMaster[0], numNodesMaster[2]) = total_stiffness(numNodesMaster[0], numNodesMaster[2]) + stiffnessMaster [2];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[0]) = total_stiffness(numNodesMaster[1], numNodesMaster[0]) + stiffnessMaster [3];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[1]) = total_stiffness(numNodesMaster[1], numNodesMaster[1]) + stiffnessMaster [4];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[2]) = total_stiffness(numNodesMaster[1], numNodesMaster[2]) + stiffnessMaster [5];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[0]) = total_stiffness(numNodesMaster[2], numNodesMaster[0]) + stiffnessMaster [6];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[1]) = total_stiffness(numNodesMaster[2], numNodesMaster[1]) + stiffnessMaster [7];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[2]) = total_stiffness(numNodesMaster[2], numNodesMaster[2]) + stiffnessMaster [8];
 			}// End of the loop over the processes.
 	
 	}// End of the master.
 	
 	std::vector<int> numNodesSlave(3); // Number of the nodes sent to the slave
 	std::vector<Node*> nodesSlave(3);
-    for(unsigned int i = 0; i<elements_macro.size(); i++)
+	
+    for(unsigned int i = 0; i < elements_macro.size(); i++)
     {
-        //cout << i << endl;
         if(elements_macro[i]->type == 2)//If triangle
         {
-            // Obtaining nodes numbers :
+        	// vérifier qu'on a pas un -1 qqpart
+        if(myrank != 0){
 
-            //cout << "triangle" << endl;
-
-            Node *n1 = elements_macro[i]->nodes[0];
-            Node *n2 = elements_macro[i]->nodes[1];
-            Node *n3 = elements_macro[i]->nodes[2];
-
+			MPI_Recv (numElem, 1, MPI_INT, 0, 38, MPI_COMM_WORLD, & status);
+			MPI_Recv (temperaturesSlave, 3, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, & status);
+			
+			// On récupère les noeuds relatifs à l'élément envoyé
+			Node *n1 = elements_macro[numElem]->nodes[0];
+            Node *n2 = elements_macro[numElem]->nodes[1];
+            Node *n3 = elements_macro[numElem]->nodes[2];
+			
+			// Leurs coordonnées
             double x1 = n1->x;
             double y1 = n1->y;
             double x2 = n2->x;
@@ -307,109 +298,54 @@ while(criterionFEM2 > criterionFEM2_min)
             double x3 = n3->x;
             double y3 = n3->y;
 
-            int num_n1,num_n2,num_n3;
+			// Leurs numéros
+            int num_n1, num_n2, num_n3;
             num_n1 = n1->num;
             num_n2 = n2->num;
             num_n3 = n3->num;
 
-            // Jacobian :
+            // Jacobian
             J (0, 0) = x2 - x1;
             J (0, 1) = y2 - y1;
             J (1, 0) = x3 - x1;
             J (1, 1) = y3 - y1;
 
-            // Determinant of the Jacobian :
-            det_J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);//Determinant of the Jacobian matrix
-
+            // Determinant of the Jacobian 
+            det_J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
+            
             //Inverse of the Jacobian Matrix
             inverse_J(0,0) = 1.0/det_J*(y3-y1);
             inverse_J(0,1) = 1.0/det_J*(y1-y2);
             inverse_J(1,0) = 1.0/det_J*(x1-x3);
             inverse_J(1,1) = 1.0/det_J*(x2-x1);
 
-            // Computation of the gradient of shape functions in the real space :
-
             gmm::mult(inverse_J, gradPhi1_red, gradPhi1);
             gmm::mult(inverse_J, gradPhi2_red, gradPhi2);
             gmm::mult(inverse_J, gradPhi3_red, gradPhi3);
 
-            //Mean temperature :
-
-            //Obtaining nodal temperatures :
-
-            std::vector<double> sol_u;
-            sol_u = solutionTemperature_macro[elements_macro[i] -> nodes[0]];
-            u1 = sol_u[0];
-            sol_u = solutionTemperature_macro[elements_macro[i] -> nodes[1]];
-            u2 = sol_u[0];
-            sol_u = solutionTemperature_macro[elements_macro[i] -> nodes[2]];
-            u3 = sol_u[0];
-
-            //cout << "u1 u2 u3 " << u1 << " " << u2 << " " << u3 << endl;
-            //cout << "num_u1 num_u2 num_u3 " << num_n1 << " " << num_n2 << " " << num_n3 << endl;
-
+            u1 = temperaturesSlave[0];
+            u2 = temperaturesSlave[1];
+            u3 = temperaturesSlave[2];
+            
             T_mean = (1.0/3.0)*(u1 + u2 + u3);
-            //cout << "t mean " << T_mean << endl;
-
-            //cout << T_mean << endl ;
-
+            
             conditions_micro.meanTemperature = T_mean;
             conditions_micro.xGradient = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
             conditions_micro.yGradient = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
 
-            //cout << conditions_micro.xGradient << endl;
-
             gradT[0] = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
             gradT[1] = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
-
-            // Computation of the mean heat flux on the element (periodic conditions)
-
-
-
-
-
-
-                //cout << "gradx " << conditions_micro.xGradient << endl;
-                //cout << "grady " << conditions_micro.yGradient << endl;
-                //cout << "Tm " << conditions_micro.meanTemperature << endl;
-
-
-
 
             fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro,
                 THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
 
-            //cout << "vol_micro =" << vol_micro << endl;
             q_Me[0] = 0.0;
             q_Me[1] = 0.0;
             Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
-            //cout << "q_Mex " << q_Me[0] << endl;
-            //cout << "q_Mey " << q_Me[1] << endl;
 
             conductivityTensor(q_Me, gradT, kappa_e);
-
-            /*if(i == elements_macro.size()-1){
-            for(unsigned int m=0; m<2; m++)
-            {
-                for(unsigned int n=0; n<2; n++)
-                {
-                    double out = kappa_e(m,n);
-                    cout << out << "		";
-                }
-                cout << endl;
-            }}
-
-            /*kappa_e (0,0) = 50.;
-	    kappa_e (0, 1) = 0.;
-	    kappa_e (1, 0) = 0.;
-	    kappa_e (1, 1) = 50.;*/
-
-
-            //cout << endl;
-
-
-            // Computing the elementary stiffness Ke_ij once kappa_e_e is known
-
+        
+        	// Computing elementary stiffness matrix
             gmm::mult(kappa_e, inverse_J, a0);
 
             gmm::mult(a0, gradPhi1_red, a1);
@@ -439,34 +375,27 @@ while(criterionFEM2 > criterionFEM2_min)
             element_stiffness(2, 1) = element_stiffness_temp;
             element_stiffness_temp = gmm::vect_sp(a3, b3);
             element_stiffness(2, 2) = element_stiffness_temp;
-
+            
             gmm::scale(element_stiffness, 0.5*det_J);
-
+            
+            //mettre sous forme de vecteur ! 
+            
+            
+            MPI_Send (stiffnessMaster, 9, MPI_DOUBLE, 0, 39, MPI_COMM_WORLD, & status);
+			MPI_Send (numNodesMaster, 3, MPI_INT, 0, 40, MPI_COMM_WORLD, & status);
+        }// end if myrank
 
             // Assembling the K_ij
-            total_stiffness(num_n1-1, num_n1-1) = total_stiffness(num_n1-1, num_n1-1) + element_stiffness(0, 0);
-            total_stiffness(num_n1-1, num_n2-1) = total_stiffness(num_n1-1, num_n2-1) + element_stiffness(0, 1);
-            total_stiffness(num_n1-1, num_n3-1) = total_stiffness(num_n1-1, num_n3-1) + element_stiffness(0, 2);
-            total_stiffness(num_n2-1, num_n1-1) = total_stiffness(num_n2-1, num_n1-1) + element_stiffness(1, 0);
-            total_stiffness(num_n2-1, num_n2-1) = total_stiffness(num_n2-1, num_n2-1) + element_stiffness(1, 1);
-            total_stiffness(num_n2-1, num_n3-1) = total_stiffness(num_n2-1, num_n3-1) + element_stiffness(1, 2);
-            total_stiffness(num_n3-1, num_n1-1) = total_stiffness(num_n3-1, num_n1-1) + element_stiffness(2, 0);
-            total_stiffness(num_n3-1, num_n2-1) = total_stiffness(num_n3-1, num_n2-1) + element_stiffness(2, 1);
-            total_stiffness(num_n3-1, num_n3-1) = total_stiffness(num_n3-1, num_n3-1) + element_stiffness(2, 2);
-
-            /*for(unsigned int m=0; m<3; m++)
-            {
-                for(unsigned int n=0; n<3; n++)
-                {
-                    double out = element_stiffness(m,n);
-                    cout << out << "		";
-                }
-                cout << endl;
-            }
-            cout << endl;*/
-
+            // total_stiffness(num_n1-1, num_n1-1) = total_stiffness(num_n1-1, num_n1-1) + element_stiffness(0, 0);
+            // total_stiffness(num_n1-1, num_n2-1) = total_stiffness(num_n1-1, num_n2-1) + element_stiffness(0, 1);
+            // total_stiffness(num_n1-1, num_n3-1) = total_stiffness(num_n1-1, num_n3-1) + element_stiffness(0, 2);
+            // total_stiffness(num_n2-1, num_n1-1) = total_stiffness(num_n2-1, num_n1-1) + element_stiffness(1, 0);
+            // total_stiffness(num_n2-1, num_n2-1) = total_stiffness(num_n2-1, num_n2-1) + element_stiffness(1, 1);
+            // total_stiffness(num_n2-1, num_n3-1) = total_stiffness(num_n2-1, num_n3-1) + element_stiffness(1, 2);
+            // total_stiffness(num_n3-1, num_n1-1) = total_stiffness(num_n3-1, num_n1-1) + element_stiffness(2, 0);
+            // total_stiffness(num_n3-1, num_n2-1) = total_stiffness(num_n3-1, num_n2-1) + element_stiffness(2, 1);
+            // total_stiffness(num_n3-1, num_n3-1) = total_stiffness(num_n3-1, num_n3-1) + element_stiffness(2, 2);
         }//end if triangle
-    //cout << i << endl;
     }//end for i
 
     for(unsigned int i = 0; i < elements_macro.size(); i++)
