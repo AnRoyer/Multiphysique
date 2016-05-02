@@ -3,7 +3,6 @@
 #include <vector>
 #include <map>
 #include <string>
-#include <stdlib.h>
 #include <mpi.h>
 #include "gmm/gmm.h"
 #include "fem.h"
