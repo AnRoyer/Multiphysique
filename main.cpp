@@ -206,7 +206,7 @@ int main(int argc, char **argv)
     if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
     {
         FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro,
-            conditions_micro, nodes, elements, physicals, parameters, solutionTemperature, eps);
+            conditions_micro, nodes, elements, physicals, parameters, solutionTemperature, eps, argc, argv);
     }
 
     writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
