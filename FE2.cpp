@@ -338,7 +338,7 @@ while(criterionFEM2 > criterionFEM2_min)
 
             conductivityTensor(q_Me, gradT, kappa_e);
         
-        	// Computing elementary stiffness matrix
+	// Computing elementary stiffness matrix
             gmm::mult(kappa_e, inverse_J, a0);
 
             gmm::mult(a0, gradPhi1_red, a1);
