@@ -161,20 +161,39 @@ while(criterionFEM2 > criterionFEM2_min)
 		int source;	// Rank of the process sending a submatrix Ke
 		int numToSend; // Number of the element to send to the slave. The slave will be responsible for this macroscopic element.
 		int numElem; // Contains the number of the finite element associated to the Ke matrix a slave sends.
-		int nodesSlave [3]; // Number of the nodes sent to the slave
-		double temperaturesSlave [3]; // Temperatures of the nodes sent to the slave
-		double received [9]; // Will contain the 9 elements of the submatrice Ke (sent by process source)
+		std::vector<Node*> nodesSlave(3); // Nodes : pointeur ou pas??? cfr. gmshio.h sinon 3 nodes à la main
+		std::vector<int> numNodesSlave(3); // Number of the nodes sent to the slave by the master
+		std::vector<int> numNodesMaster(3); // Number of the nodes sent by the slave to the master
+		std::vector<double> temperaturesSlave(3); // Temperatures of the nodes sent to the slave
+		std::vector<double> stiffnessReceived(9); // Will contain the 9 elements of the submatrice Ke (sent by process source)
 		
 		// INITIALIZATION : Now an element number is sent to each slave, so that all the slaves are busy at the beginning.
 		int p; // Process number
-		for (p = 1; p<= nbproc-1; p++)
+		for (p = 1; p <= nbproc-1; p++)
 		{
-			numToSend = p-1 // Process 0 will be busy with finite element 0,...
-	    		Node *n1 = elements_macro[numElem]->nodes[0];
-	        	Node *n2 = elements_macro[numElem]->nodes[1];
-        		Node *n3 = elements_macro[numElem]->nodes[2];
-			MPI_Send (nodesSlave, 3, MPI_INT, p, 38, MPI_COMM_WORLD);
-			MPI_Send (nodesSlave, 3, MPI_INT, p, 38, MPI_COMM_WORLD);
+			numToSend = p - 1; // Process 0 will be busy with finite element 0,...
+	    		
+	    		// Nodes of the elements
+	    		nodesSlave[0] = elements_macro[numToSend]->nodes[0];
+	        	nodesSlave[1] = elements_macro[numToSend]->nodes[1];
+        		nodesSlave[2] = elements_macro[numToSend]->nodes[2];
+        		
+        		// Numbers of these nodes
+		        numNodesSlave[0] = nSlave1->num;
+		        numNodesSlave[1] = nSlave2->num;
+		        numNodesSlave[2] = nSlave3->num;
+		        
+		        // Temperatures at these nodes
+			std::vector<double> ;
+			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[0]];
+			temperaturesSlave[0] = sol_u[0];
+			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[1]];
+			temperaturesSlave[1] = sol_u[0];
+			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
+			temperaturesSlave[2] = sol_u[0];
+		        
+			MPI_Send (numNodesSlave, 3, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (temperaturesSlave, 3, MPI_INT, p, 42, MPI_COMM_WORLD);
 		}
 		// End of initialization
 		
@@ -182,42 +201,49 @@ while(criterionFEM2 > criterionFEM2_min)
 		master process asks it to work now with finite element i and put the submatrix in K.
 		*/
 		
-		for (int i = nbproc-1; i< nbElem; i++)
+		for (int i = nbproc - 1; i < nbElem; i++)
 		{
 			// Reception d'une sous matrice de la part d'un process a priori inconnu :
-			MPI_Recv (received, 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
+			MPI_Recv (stiffnessReceived, 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
 			source = status.MPI_SOURCE;
-			//printf ("Le process 0 a recu du process %d \n", source);
-			// Réception de la position correspondante : 
-			MPI_Recv (& numElem, 1, MPI_INT, source, 40, MPI_COMM_WORLD, & status);
-			//printf ("Le process 0 va renvoyer au process %d \n", source); 
+			// Réception des noeuds correspondants
+			MPI_Recv (numNodesMaster, 3, MPI_INT, source, 40, MPI_COMM_WORLD, & status);
+			
 			// On demande maintenant au process source de se charger de l'élément i
-			MPI_Send (& i, 1, MPI_INT, source, 38, MPI_COMM_WORLD);
-			//printf ("Le process 0 a renvoye au process %d \n", source);
+			numToSend = i; // Same procedure than for the initializatino but with element number i
+	    		
+	    		// Nodes of the elements
+	    		nodesSlave[0] = elements_macro[numToSend]->nodes[0];
+	        	nodesSlave[1] = elements_macro[numToSend]->nodes[1];
+        		nodesSlave[2] = elements_macro[numToSend]->nodes[2];
+        		
+        		// Numbers of these nodes
+		        numNodesSlave[0] = nSlave1->num;
+		        numNodesSlave[1] = nSlave2->num;
+		        numNodesSlave[2] = nSlave3->num;
+		        
+		        // Temperatures at these nodes
+			std::vector<double> ;
+			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[0]];
+			temperaturesSlave[0] = sol_u[0];
+			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[1]];
+			temperaturesSlave[1] = sol_u[0];
+			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
+			temperaturesSlave[2] = sol_u[0];
+		        
+			MPI_Send (numNodesSlave, 3, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (temperaturesSlave, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 			
-			// Adding the received submatrix Ke to the K matrix :
-		
-			// First obtain the nodes  :
-	    	Node *n1 = elements_macro[numElem]->nodes[0];
-	        Node *n2 = elements_macro[numElem]->nodes[1];
-	        Node *n3 = elements_macro[numElem]->nodes[2];
-		
-		// Then their numbers :
-		int num_n1,num_n2,num_n3;
-	        num_n1 = n1->num;
-	        num_n2 = n2->num;
-	        num_n3 = n3->num;
-			
-		
-	        total_stiffness(num_n1-1, num_n1-1) = total_stiffness(num_n1-1, num_n1-1) + received [0];
-	        total_stiffness(num_n1-1, num_n2-1) = total_stiffness(num_n1-1, num_n2-1) + received [2];
-	        total_stiffness(num_n1-1, num_n3-1) = total_stiffness(num_n1-1, num_n3-1) + received [3];
-	        total_stiffness(num_n2-1, num_n1-1) = total_stiffness(num_n2-1, num_n1-1) + received [4];
-	        total_stiffness(num_n2-1, num_n2-1) = total_stiffness(num_n2-1, num_n2-1) + received [5];
-	        total_stiffness(num_n2-1, num_n3-1) = total_stiffness(num_n2-1, num_n3-1) + received [6];
-	        total_stiffness(num_n3-1, num_n1-1) = total_stiffness(num_n3-1, num_n1-1) + received [7];
-	        total_stiffness(num_n3-1, num_n2-1) = total_stiffness(num_n3-1, num_n2-1) + received [8];
-	        total_stiffness(num_n3-1, num_n3-1) = total_stiffness(num_n3-1, num_n3-1) + received [9];
+			// Now compute the stiffness matrix with the one sent by the slave
+		        total_stiffness(numNodesMaster[0], numNodesMaster[0]) = total_stiffness(numNodesMaster[0], numNodesMaster[0]) + received [0];
+		        total_stiffness(numNodesMaster[0], numNodesMaster[1]) = total_stiffness(numNodesMaster[0], numNodesMaster[1]) + received [1];
+		        total_stiffness(numNodesMaster[0], numNodesMaster[2]) = total_stiffness(numNodesMaster[0], numNodesMaster[2]) + received [2];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[0]) = total_stiffness(numNodesMaster[1], numNodesMaster[0]) + received [3];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[1]) = total_stiffness(numNodesMaster[1], numNodesMaster[1]) + received [4];
+		        total_stiffness(numNodesMaster[1], numNodesMaster[2]) = total_stiffness(numNodesMaster[1], numNodesMaster[2]) + received [5];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[0]) = total_stiffness(numNodesMaster[2], numNodesMaster[0]) + received [6];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[1]) = total_stiffness(numNodesMaster[2], numNodesMaster[1]) + received [7];
+		        total_stiffness(numNodesMaster[2], numNodesMaster[2]) = total_stiffness(numNodesMaster[2], numNodesMaster[2]) + received [8];
 	
 		}
 		
@@ -225,7 +251,7 @@ while(criterionFEM2 > criterionFEM2_min)
 		   then add it to the total stifness matrix and send the finite element number -1 to each slave to tell them their work is finished.
 		*/
 		int flag = -1;
-		for (p = 1; p<= nbproc-1; p++)
+		for (p = 1; p <= nbproc - 1; p++)
 		{
 			MPI_Recv (received, 4, MPI_DOUBLE, p, 39, MPI_COMM_WORLD, & status);
 			MPI_Recv (& numElem, 1, MPI_INT, p, 40, MPI_COMM_WORLD, & status);
@@ -259,7 +285,8 @@ while(criterionFEM2 > criterionFEM2_min)
 	
 	}// End of the master.
 	
-	
+	std::vector<int> numNodesSlave(3); // Number of the nodes sent to the slave
+	std::vector<Node*> nodesSlave(3);
     for(unsigned int i = 0; i<elements_macro.size(); i++)
     {
         //cout << i << endl;
