@@ -281,9 +281,13 @@ while(criterionFEM2 > criterionFEM2_min)
         {
         	// vérifier qu'on a pas un -1 qqpart
         if(myrank != 0){
-
-			MPI_Recv (numElem, 1, MPI_INT, 0, 38, MPI_COMM_WORLD, & status);
+        	MPI_Recv (numElem, 1, MPI_INT, 0, 38, MPI_COMM_WORLD, & status);
 			MPI_Recv (temperaturesSlave, 3, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, & status);
+
+			if(numElem == -1)
+			{
+				break;
+			}
 			
 			// On récupère les noeuds relatifs à l'élément envoyé
 			Node *n1 = elements_macro[numElem]->nodes[0];
@@ -378,9 +382,16 @@ while(criterionFEM2 > criterionFEM2_min)
             
             gmm::scale(element_stiffness, 0.5*det_J);
             
-            //mettre sous forme de vecteur ! 
-            
-            
+        	stiffnessMaster[0] = element_stiffness(0, 0);
+        	stiffnessMaster[1] = element_stiffness(0, 1);
+        	stiffnessMaster[2] = element_stiffness(0, 2);
+        	stiffnessMaster[3] = element_stiffness(1, 0);
+        	stiffnessMaster[4] = element_stiffness(1, 1);
+        	stiffnessMaster[5] = element_stiffness(1, 2);
+        	stiffnessMaster[6] = element_stiffness(2, 0);
+        	stiffnessMaster[7] = element_stiffness(2, 1);
+            stiffnessMaster[8] = element_stiffness(2, 2);
+
             MPI_Send (stiffnessMaster, 9, MPI_DOUBLE, 0, 39, MPI_COMM_WORLD, & status);
 			MPI_Send (numNodesMaster, 3, MPI_INT, 0, 40, MPI_COMM_WORLD, & status);
         }// end if myrank
