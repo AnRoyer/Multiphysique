@@ -161,6 +161,8 @@ while(criterionFEM2 > criterionFEM2_min)
 		int source;	// Rank of the process sending a submatrix Ke
 		int numToSend; // Number of the element to send to the slave. The slave will be responsible for this macroscopic element.
 		int numElem; // Contains the number of the finite element associated to the Ke matrix a slave sends.
+		int nodesSlave [3]; // Number of the nodes sent to the slave
+		double temperaturesSlave [3]; // Temperatures of the nodes sent to the slave
 		double received [9]; // Will contain the 9 elements of the submatrice Ke (sent by process source)
 		
 		// INITIALIZATION : Now an element number is sent to each slave, so that all the slaves are busy at the beginning.
@@ -168,7 +170,11 @@ while(criterionFEM2 > criterionFEM2_min)
 		for (p = 1; p<= nbproc-1; p++)
 		{
 			numToSend = p-1 // Process 0 will be busy with finite element 0,...
-			MPI_Send (& numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+	    		Node *n1 = elements_macro[numElem]->nodes[0];
+	        	Node *n2 = elements_macro[numElem]->nodes[1];
+        		Node *n3 = elements_macro[numElem]->nodes[2];
+			MPI_Send (nodesSlave, 3, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (nodesSlave, 3, MPI_INT, p, 38, MPI_COMM_WORLD);
 		}
 		// End of initialization
 		
