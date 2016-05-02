@@ -3,6 +3,8 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <stdlib.h>
+#include <mpi.h>
 #include "gmm/gmm.h"
 #include "fem.h"
 #include "FE2.h"
@@ -18,112 +20,155 @@ void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro,
          std::vector<Parameter*> &parameters_micro, std::map<Node*, std::vector<double> > &solutionTemperature_micro,
          std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro,
          std::vector<Element*> &elements_macro, std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro,
-         std::map<Node*, std::vector<double> > &solutionTemperature_macro, double eps)
+         std::map<Node*, std::vector<double> > &solutionTemperature_macro, double eps, int argc, char ** argv)
 {
 
-//criterion for the overall FEM2 method.
-double criterionFEM2 = 10000; //criterion used for the convergence of the overall FEM2 method.
-double criterionFEM2_min = 0.1; //When convergence is reached.
-double criterionFEM0 =0;
+// MPI initialization : 
+MPI_Init(&argc, &argv);
+MPI_Status status;
+int nbproc, myrank ;
+MPI_Comm_rank( MPI_COMM_WORLD, &myrank);
+MPI_Comm_size( MPI_COMM_WORLD, &nbproc);
 
+if (myrank == 0)
+{
+    //criterion for the overall FEM2 method.
+    double criterionFEM2 = 10000; //criterion used for the convergence of the overall FEM2 method.
+    double criterionFEM2_min = 0.1; //When convergence is reached.
+    double criterionFEM0 =0;
+}
 // Declarations by Corentin :
 
-double T_mean;
-
-double u1, u2, u3; // Nodal temperatures of an element
-
-gmm::dense_matrix<double> J(2, 2); // Jacobian matrix
-gmm::dense_matrix<double> inverse_J(2, 2); // Its inverse
-double det_J; // Its determinant
-
-std::vector<double> gradPhi1_red(2);
-std::vector<double> gradPhi2_red(2);
-std::vector<double> gradPhi3_red(2);
-std::vector<double> gradPhi1(2);
-std::vector<double> gradPhi2(2);
-std::vector<double> gradPhi3(2);
-
-gradPhi1_red[0] = -1.0;
-gradPhi1_red[1] = -1.0;
-gradPhi2_red[0] = 1.0;
-gradPhi2_red[1] = 0.0;
-gradPhi3_red[0] = 0.0;
-gradPhi3_red[1] = 1.0;
-
-std::vector<double> q_Me(2);   // Flux moyen sur l'élément
-
-std::vector<double> gradT(2);// Gradient moyen
-gmm::dense_matrix<double> kappa_e(2,2);// Conductivité élémentaire.
-
-gmm::dense_matrix<double> element_stiffness(3, 3); // Matrix of the elementary stiffness K_e
-gmm::dense_matrix<double> total_stiffness(nodes_macro.size(), nodes_macro.size()); // Matrix of the stiffness for the whole domain K
-
-gmm::dense_matrix<double> a0(2, 2); // kappa_e_e times inverse of J in Eq. (9) of ddl 4 group B
-std::vector<double> a1(2); // a1 times gradPhi_1
-std::vector<double> a2(2); // a1 times gradPhi_2
-std::vector<double> a3(2); // a1 times gradPhi_3
-std::vector<double> b1(2); // inverse of J times gradPhi_i
-std::vector<double> b2(2); // inverse of J times gradPhi_2
-std::vector<double> b3(2); // inverse of J times gradPhi_3
-
-std::map<int, Parameter*> region_micro;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
-
-/*Chargement des paramètres de la struc Parameter contenant les paramètres d'entrées.
-A chaque éléments de physicals, on lui associe l'élément de "parameters" correspondant. La correspondance est mappé dans linesRegion et surfaceRegion en fonction du type de paramètre
-*/
-
-for(unsigned int i = 0; i < physicals_micro.size(); i++)
+if (myrank != 0)
 {
-    for(unsigned int j = 0; j < parameters_micro.size(); j++)
-    {
-        if(parameters_micro[j]->name == physicals_micro[i]->name)
-        {
-            if(parameters_micro[j]->dim != physicals_micro[i]->dim)//Verification si erreurs entre les deux fichiers
-            {
-                cout << "Error: file.phy and file.msh do not correspond" << endl;
-            }
-            else
-            {
-                region_micro[physicals_micro[i]->num] = parameters_micro[j];
-            }
-        }
-    }
+	double T_mean;
+	
+	double u1, u2, u3; // Nodal temperatures of an element
+	
+	gmm::dense_matrix<double> J(2, 2); // Jacobian matrix
+	gmm::dense_matrix<double> inverse_J(2, 2); // Its inverse
+	double det_J; // Its determinant
+	
+	std::vector<double> gradPhi1_red(2);
+	std::vector<double> gradPhi2_red(2);
+	std::vector<double> gradPhi3_red(2);
+	std::vector<double> gradPhi1(2);
+	std::vector<double> gradPhi2(2);
+	std::vector<double> gradPhi3(2);
+	
+	gradPhi1_red[0] = -1.0;
+	gradPhi1_red[1] = -1.0;
+	gradPhi2_red[0] = 1.0;
+	gradPhi2_red[1] = 0.0;
+	gradPhi3_red[0] = 0.0;
+	gradPhi3_red[1] = 1.0;
+	
+	std::vector<double> q_Me(2);   // Flux moyen sur l'élément
+	
+	std::vector<double> gradT(2);// Gradient moyen
+	gmm::dense_matrix<double> kappa_e(2,2);// Conductivité élémentaire.
+	
+	gmm::dense_matrix<double> element_stiffness(3, 3); // Matrix of the elementary stiffness K_e
+	gmm::dense_matrix<double> total_stiffness(nodes_macro.size(), nodes_macro.size()); // Matrix of the stiffness for the whole domain K
+	
+	gmm::dense_matrix<double> a0(2, 2); // kappa_e_e times inverse of J in Eq. (9) of ddl 4 group B
+	std::vector<double> a1(2); // a1 times gradPhi_1
+	std::vector<double> a2(2); // a1 times gradPhi_2
+	std::vector<double> a3(2); // a1 times gradPhi_3
+	std::vector<double> b1(2); // inverse of J times gradPhi_i
+	std::vector<double> b2(2); // inverse of J times gradPhi_2
+	std::vector<double> b3(2); // inverse of J times gradPhi_3
+	
+	std::map<int, Parameter*> region_micro;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
+
 }
 
-double vol_micro=0;
-std::vector<double> c(nodes_micro.size());
 
-f_function(c, nodes_micro, elements_micro, region_micro, THERMALFLAG, 1);
-
-for(unsigned int j=0; j<nodes_micro.size(); j++)
+if (myrank == 0)
 {
-    vol_micro += c[j];
+
+	/*Chargement des paramètres de la struc Parameter contenant les paramètres d'entrées.
+	A chaque éléments de physicals, on lui associe l'élément de "parameters" correspondant. La correspondance est mappé dans linesRegion et surfaceRegion en fonction du type de paramètre
+	*/
+	
+	for(unsigned int i = 0; i < physicals_micro.size(); i++)
+	{
+	    for(unsigned int j = 0; j < parameters_micro.size(); j++)
+	    {
+	        if(parameters_micro[j]->name == physicals_micro[i]->name)
+	        {
+	            if(parameters_micro[j]->dim != physicals_micro[i]->dim)//Verification si erreurs entre les deux fichiers
+	            {
+	                cout << "Error: file.phy and file.msh do not correspond" << endl;
+	            }
+	            else
+	            {
+	                region_micro[physicals_micro[i]->num] = parameters_micro[j];
+	            }
+	        }
+	    }
+	}
+	
+	double vol_micro=0;
+	std::vector<double> c(nodes_micro.size());
+	
+	f_function(c, nodes_micro, elements_micro, region_micro, THERMALFLAG, 1);
+
+	for(unsigned int j=0; j<nodes_micro.size(); j++)
+	{
+	    vol_micro += c[j];
+	}
+	
+	cout << "vol_micro " << vol_micro << endl;
+	
+	//Computation of the f_i vector function of the heat generation in the macro domain. region_macro has to be initialized as in the fem function.
+	map<int, Parameter*> region_macro;
+	for(unsigned int i = 0; i < physicals_macro.size(); i++)
+	{
+	    for(unsigned int j = 0; j < parameters_macro.size(); j++)
+	    {
+	        if(parameters_macro[j]->name == physicals_macro[i]->name)
+	        {
+	            if(parameters_macro[j]->dim != physicals_macro[i]->dim)//Verification si erreurs entre les deux fichiers
+	            {
+	                cout << "Error: file.phy and file.msh do not correspond" << endl;
+	            }
+	            else
+	            {
+	                region_macro[physicals_macro[i]->num] = parameters_macro[j];
+	            }
+	        }
+	    }
+	}
+	
+	std::vector<double> f_i(nodes_macro.size());
+	f_function(f_i, nodes_macro, elements_macro, region_macro, THERMALFLAG, 0); //utilisation of f_function from fem.cpp file.
+
 }
 
-cout << "vol_micro " << vol_micro << endl;
+//-----------------DEBUT DE LA BOUCLE A PARALLELISER-------------------------------
 
-//Computation of the f_i vector function of the heat generation in the macro domain. region_macro has to be initialized as in the fem function.
-map<int, Parameter*> region_macro;
-for(unsigned int i = 0; i < physicals_macro.size(); i++)
+int nbElem = elements_macro.size();
+
+if (myrank == 0) // Travail du maître
 {
-    for(unsigned int j = 0; j < parameters_macro.size(); j++)
-    {
-        if(parameters_macro[j]->name == physicals_macro[i]->name)
-        {
-            if(parameters_macro[j]->dim != physicals_macro[i]->dim)//Verification si erreurs entre les deux fichiers
-            {
-                cout << "Error: file.phy and file.msh do not correspond" << endl;
-            }
-            else
-            {
-                region_macro[physicals_macro[i]->num] = parameters_macro[j];
-            }
-        }
-    }
+	int source;	// Rank of the process sending a submatrix Ke
+	int numToSend; // Number of the element to send to the slave. The slave will be responsible for this macroscopic element.
+	double received [9]; // Will contain the 9 elements of the submatrice Ke (sent by process source)
+	
+	// INITIALIZATION : Now an element number is sent to each slave, so that all the slaves are busy at the beginning.
+	int p; // Process number
+	for (p = 1; p<= nbproc-1; p++)
+	{
+		numToSend = p-1 // Process 0 will be busy with finite element 0,...
+		MPI_Send (& numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+	}
+	// End of initialization
+	
+	/* Now the master loops over the remainder of the finite elements. When the slave process number source sends back a Ke matrix,
+	master process asks it to work now with finite element i and put the submatrix in K.
+	*/
 }
-
-std::vector<double> f_i(nodes_macro.size());
-f_function(f_i, nodes_macro, elements_macro, region_macro, THERMALFLAG, 0); //utilisation of f_function from fem.cpp file.
 
 int i_while =0;
 while(criterionFEM2 > criterionFEM2_min)
