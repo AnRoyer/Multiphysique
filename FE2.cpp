@@ -150,29 +150,110 @@ if (myrank == 0)
 
 int nbElem = elements_macro.size();
 
-if (myrank == 0) // Travail du maître
-{
-	int source;	// Rank of the process sending a submatrix Ke
-	int numToSend; // Number of the element to send to the slave. The slave will be responsible for this macroscopic element.
-	double received [9]; // Will contain the 9 elements of the submatrice Ke (sent by process source)
-	
-	// INITIALIZATION : Now an element number is sent to each slave, so that all the slaves are busy at the beginning.
-	int p; // Process number
-	for (p = 1; p<= nbproc-1; p++)
-	{
-		numToSend = p-1 // Process 0 will be busy with finite element 0,...
-		MPI_Send (& numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
-	}
-	// End of initialization
-	
-	/* Now the master loops over the remainder of the finite elements. When the slave process number source sends back a Ke matrix,
-	master process asks it to work now with finite element i and put the submatrix in K.
-	*/
-}
+
 
 int i_while =0;
 while(criterionFEM2 > criterionFEM2_min)
 {
+	
+	if (myrank == 0) // Travail du maître
+	{
+		int source;	// Rank of the process sending a submatrix Ke
+		int numToSend; // Number of the element to send to the slave. The slave will be responsible for this macroscopic element.
+		int numElem; // Contains the number of the finite element associated to the Ke matrix a slave sends.
+		double received [9]; // Will contain the 9 elements of the submatrice Ke (sent by process source)
+		
+		// INITIALIZATION : Now an element number is sent to each slave, so that all the slaves are busy at the beginning.
+		int p; // Process number
+		for (p = 1; p<= nbproc-1; p++)
+		{
+			numToSend = p-1 // Process 0 will be busy with finite element 0,...
+			MPI_Send (& numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+		}
+		// End of initialization
+		
+		/* Now the master loops over the remainder of the finite elements. When the slave process number source sends back a Ke matrix,
+		master process asks it to work now with finite element i and put the submatrix in K.
+		*/
+		
+		for (int i = nbproc-1; i< nbElem; i++)
+		{
+			// Reception d'une sous matrice de la part d'un process a priori inconnu :
+			MPI_Recv (received, 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
+			source = status.MPI_SOURCE;
+			//printf ("Le process 0 a recu du process %d \n", source);
+			// Réception de la position correspondante : 
+			MPI_Recv (& numElem, 1, MPI_INT, source, 40, MPI_COMM_WORLD, & status);
+			//printf ("Le process 0 va renvoyer au process %d \n", source); 
+			// On demande maintenant au process source de se charger de l'élément i
+			MPI_Send (& i, 1, MPI_INT, source, 38, MPI_COMM_WORLD);
+			//printf ("Le process 0 a renvoye au process %d \n", source);
+			
+			// Adding the received submatrix Ke to the K matrix :
+		
+			// First obtain the nodes  :
+		    Node *n1 = elements_macro[numElem]->nodes[0];
+	        Node *n2 = elements_macro[numElem]->nodes[1];
+	        Node *n3 = elements_macro[numElem]->nodes[2];
+		
+			// Then their numbers :
+			int num_n1,num_n2,num_n3;
+	        num_n1 = n1->num;
+	        num_n2 = n2->num;
+	        num_n3 = n3->num;
+			
+		
+	        total_stiffness(num_n1-1, num_n1-1) = total_stiffness(num_n1-1, num_n1-1) + received [0];
+	        total_stiffness(num_n1-1, num_n2-1) = total_stiffness(num_n1-1, num_n2-1) + received [2];
+	        total_stiffness(num_n1-1, num_n3-1) = total_stiffness(num_n1-1, num_n3-1) + received [3];
+	        total_stiffness(num_n2-1, num_n1-1) = total_stiffness(num_n2-1, num_n1-1) + received [4];
+	        total_stiffness(num_n2-1, num_n2-1) = total_stiffness(num_n2-1, num_n2-1) + received [5];
+	        total_stiffness(num_n2-1, num_n3-1) = total_stiffness(num_n2-1, num_n3-1) + received [6];
+	        total_stiffness(num_n3-1, num_n1-1) = total_stiffness(num_n3-1, num_n1-1) + received [7];
+	        total_stiffness(num_n3-1, num_n2-1) = total_stiffness(num_n3-1, num_n2-1) + received [8];
+	        total_stiffness(num_n3-1, num_n3-1) = total_stiffness(num_n3-1, num_n3-1) + received [9];
+	
+		}
+		
+		/* Now the last element matrices have been "ordered", on need to wait that each of the slaves gives backs its Ke matrix,
+		   then add it to the total stifness matrix and send the finite element number -1 to each slave to tell them their work is finished.
+		*/
+		int flag = -1;
+		for (p = 1; p<= nbproc-1; p++)
+		{
+			MPI_Recv (received, 4, MPI_DOUBLE, p, 39, MPI_COMM_WORLD, & status);
+			MPI_Recv (& numElem, 1, MPI_INT, p, 40, MPI_COMM_WORLD, & status);
+			// Dire aux process que c'est terminé : 
+			MPI_Send (& flag, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+	
+	
+			// Ajout de la sous matrice recue à la matrice K :
+			// First obtain the nodes  :
+		    Node *n1 = elements_macro[numElem]->nodes[0];
+	        Node *n2 = elements_macro[numElem]->nodes[1];
+	        Node *n3 = elements_macro[numElem]->nodes[2];
+		
+			// Then their numbers :
+			int num_n1,num_n2,num_n3;
+	        num_n1 = n1->num;
+	        num_n2 = n2->num;
+	        num_n3 = n3->num;
+			
+		
+	        total_stiffness(num_n1-1, num_n1-1) = total_stiffness(num_n1-1, num_n1-1) + received [0];
+	        total_stiffness(num_n1-1, num_n2-1) = total_stiffness(num_n1-1, num_n2-1) + received [2];
+	        total_stiffness(num_n1-1, num_n3-1) = total_stiffness(num_n1-1, num_n3-1) + received [3];
+	        total_stiffness(num_n2-1, num_n1-1) = total_stiffness(num_n2-1, num_n1-1) + received [4];
+	        total_stiffness(num_n2-1, num_n2-1) = total_stiffness(num_n2-1, num_n2-1) + received [5];
+	        total_stiffness(num_n2-1, num_n3-1) = total_stiffness(num_n2-1, num_n3-1) + received [6];
+	        total_stiffness(num_n3-1, num_n1-1) = total_stiffness(num_n3-1, num_n1-1) + received [7];
+	        total_stiffness(num_n3-1, num_n2-1) = total_stiffness(num_n3-1, num_n2-1) + received [8];
+	        total_stiffness(num_n3-1, num_n3-1) = total_stiffness(num_n3-1, num_n3-1) + received [9];
+			}// End of the loop over he processes.
+	
+	}// End of the master.
+	
+	
     for(unsigned int i = 0; i<elements_macro.size(); i++)
     {
         //cout << i << endl;
