@@ -192,12 +192,12 @@ while(criterionFEM2 > criterionFEM2_min)
 			// Adding the received submatrix Ke to the K matrix :
 		
 			// First obtain the nodes  :
-		    Node *n1 = elements_macro[numElem]->nodes[0];
+	    	Node *n1 = elements_macro[numElem]->nodes[0];
 	        Node *n2 = elements_macro[numElem]->nodes[1];
 	        Node *n3 = elements_macro[numElem]->nodes[2];
 		
-			// Then their numbers :
-			int num_n1,num_n2,num_n3;
+		// Then their numbers :
+		int num_n1,num_n2,num_n3;
 	        num_n1 = n1->num;
 	        num_n2 = n2->num;
 	        num_n3 = n3->num;
@@ -227,29 +227,29 @@ while(criterionFEM2 > criterionFEM2_min)
 			MPI_Send (& flag, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
 	
 	
-			// Ajout de la sous matrice recue à la matrice K :
-			// First obtain the nodes  :
-		    Node *n1 = elements_macro[numElem]->nodes[0];
+		// Ajout de la sous matrice recue à la matrice K :
+		// First obtain the nodes  :
+	    	Node *n1 = elements_macro[numElem]->nodes[0];
 	        Node *n2 = elements_macro[numElem]->nodes[1];
 	        Node *n3 = elements_macro[numElem]->nodes[2];
 		
-			// Then their numbers :
-			int num_n1,num_n2,num_n3;
+		// Then their numbers :
+		int num_n1,num_n2,num_n3;
 	        num_n1 = n1->num;
 	        num_n2 = n2->num;
 	        num_n3 = n3->num;
 			
 		
 	        total_stiffness(num_n1-1, num_n1-1) = total_stiffness(num_n1-1, num_n1-1) + received [0];
-	        total_stiffness(num_n1-1, num_n2-1) = total_stiffness(num_n1-1, num_n2-1) + received [2];
-	        total_stiffness(num_n1-1, num_n3-1) = total_stiffness(num_n1-1, num_n3-1) + received [3];
-	        total_stiffness(num_n2-1, num_n1-1) = total_stiffness(num_n2-1, num_n1-1) + received [4];
-	        total_stiffness(num_n2-1, num_n2-1) = total_stiffness(num_n2-1, num_n2-1) + received [5];
-	        total_stiffness(num_n2-1, num_n3-1) = total_stiffness(num_n2-1, num_n3-1) + received [6];
-	        total_stiffness(num_n3-1, num_n1-1) = total_stiffness(num_n3-1, num_n1-1) + received [7];
-	        total_stiffness(num_n3-1, num_n2-1) = total_stiffness(num_n3-1, num_n2-1) + received [8];
-	        total_stiffness(num_n3-1, num_n3-1) = total_stiffness(num_n3-1, num_n3-1) + received [9];
-			}// End of the loop over he processes.
+	        total_stiffness(num_n1-1, num_n2-1) = total_stiffness(num_n1-1, num_n2-1) + received [1];
+	        total_stiffness(num_n1-1, num_n3-1) = total_stiffness(num_n1-1, num_n3-1) + received [2];
+	        total_stiffness(num_n2-1, num_n1-1) = total_stiffness(num_n2-1, num_n1-1) + received [3];
+	        total_stiffness(num_n2-1, num_n2-1) = total_stiffness(num_n2-1, num_n2-1) + received [4];
+	        total_stiffness(num_n2-1, num_n3-1) = total_stiffness(num_n2-1, num_n3-1) + received [5];
+	        total_stiffness(num_n3-1, num_n1-1) = total_stiffness(num_n3-1, num_n1-1) + received [6];
+	        total_stiffness(num_n3-1, num_n2-1) = total_stiffness(num_n3-1, num_n2-1) + received [7];
+	        total_stiffness(num_n3-1, num_n3-1) = total_stiffness(num_n3-1, num_n3-1) + received [8];
+			}// End of the loop over the processes.
 	
 	}// End of the master.
 	
