@@ -23,7 +23,7 @@ void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro,
          std::map<Node*, std::vector<double> > &solutionTemperature_macro, double eps, int argc, char ** argv)
 {
 
-// MPI initialization : :p
+// MPI initialization
 MPI_Init(&argc, &argv);
 MPI_Status status;
 int nbproc, myrank ;
