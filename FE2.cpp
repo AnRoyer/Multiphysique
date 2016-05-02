@@ -179,7 +179,7 @@ while(criterionFEM2 > criterionFEM2_min)
 			temperaturesSlave[2] = sol_u_tmp[0];
 		        
 			MPI_Send (& numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
-			MPI_Send (temperaturesSlave, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
+			MPI_Send (&temperaturesSlave[0], 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 		}
 		// End of initialization
 		
@@ -190,10 +190,10 @@ while(criterionFEM2 > criterionFEM2_min)
 		for (int i = nbproc - 1; i < nbElem; i++)
 		{
 			// Reception d'une sous matrice de la part d'un process a priori inconnu :
-			MPI_Recv (stiffnessMaster, 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
+			MPI_Recv (&stiffnessMaster[0], 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
 			source = status.MPI_SOURCE;
 			// Réception des noeuds correspondants
-			MPI_Recv (numNodesMaster, 3, MPI_INT, source, 40, MPI_COMM_WORLD, & status);
+			MPI_Recv (&numNodesMaster[0], 3, MPI_INT, source, 40, MPI_COMM_WORLD, & status);
 			
 			// On demande maintenant au process source de se charger de l'élément i
 			numToSend = i; // Same procedure than for the initializatino but with element number i
@@ -216,8 +216,8 @@ while(criterionFEM2 > criterionFEM2_min)
 			sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
 			temperaturesSlave[2] = sol_u[0];
 		        
-			MPI_Send (& numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
-			MPI_Send (temperaturesSlave, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
+			MPI_Send (&numToSend, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (&temperaturesSlave[0], 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 			
 			// Now compute the stiffness matrix with the one sent by the slave
 		        total_stiffness(numNodesMaster[0], numNodesMaster[0]) = total_stiffness(numNodesMaster[0], numNodesMaster[0]) + stiffnessMaster [0];
@@ -243,11 +243,11 @@ while(criterionFEM2 > criterionFEM2_min)
 		
 		for (p = 1; p <= nbproc - 1; p++)
 		{
-			MPI_Recv (stiffnessMaster, 9, MPI_DOUBLE, p, 39, MPI_COMM_WORLD, & status);
-			MPI_Recv (numNodesMaster, 3, MPI_INT, p, 40, MPI_COMM_WORLD, & status);
+			MPI_Recv (&stiffnessMaster[0], 9, MPI_DOUBLE, p, 39, MPI_COMM_WORLD, & status);
+			MPI_Recv (&numNodesMaster[0], 3, MPI_INT, p, 40, MPI_COMM_WORLD, & status);
 			// Dire aux process que c'est terminé
-			MPI_Send (& nodeFlag, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
-			MPI_Send (temperatureFlag, 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
+			MPI_Send (&nodeFlag, 1, MPI_INT, p, 38, MPI_COMM_WORLD);
+			MPI_Send (&temperatureFlag[0], 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 			
 		        total_stiffness(numNodesMaster[0], numNodesMaster[0]) = total_stiffness(numNodesMaster[0], numNodesMaster[0]) + stiffnessMaster [0];
 		        total_stiffness(numNodesMaster[0], numNodesMaster[1]) = total_stiffness(numNodesMaster[0], numNodesMaster[1]) + stiffnessMaster [1];
@@ -271,8 +271,8 @@ while(criterionFEM2 > criterionFEM2_min)
         {
         	// vérifier qu'on a pas un -1 qqpart
         if(myrank != 0){
-        	MPI_Recv (numElem, 1, MPI_INT, 0, 38, MPI_COMM_WORLD, & status);
-			MPI_Recv (temperaturesSlave, 3, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, & status);
+        	MPI_Recv (&numElem, 1, MPI_INT, 0, 38, MPI_COMM_WORLD, & status);
+		MPI_Recv (&temperaturesSlave[0], 3, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, & status);
 
 			if(numElem == -1)
 			{
@@ -382,8 +382,8 @@ while(criterionFEM2 > criterionFEM2_min)
         	stiffnessMaster[7] = element_stiffness(2, 1);
             stiffnessMaster[8] = element_stiffness(2, 2);
 
-            MPI_Send (stiffnessMaster, 9, MPI_DOUBLE, 0, 39, MPI_COMM_WORLD, & status);
-			MPI_Send (numNodesMaster, 3, MPI_INT, 0, 40, MPI_COMM_WORLD, & status);
+            MPI_Send (&stiffnessMaster[0], 9, MPI_DOUBLE, 0, 39, MPI_COMM_WORLD, & status);
+	    MPI_Send (&numNodesMaster[0], 3, MPI_INT, 0, 40, MPI_COMM_WORLD, & status);
         }// end if myrank
 
             // Assembling the K_ij
