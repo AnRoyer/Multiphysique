@@ -382,8 +382,8 @@ while(criterionFEM2 > criterionFEM2_min)
         	stiffnessMaster[7] = element_stiffness(2, 1);
             stiffnessMaster[8] = element_stiffness(2, 2);
 
-            MPI_Send (&stiffnessMaster[0], 9, MPI_DOUBLE, 0, 39, MPI_COMM_WORLD, & status);
-	    MPI_Send (&numNodesMaster[0], 3, MPI_INT, 0, 40, MPI_COMM_WORLD, & status);
+            MPI_Send (&stiffnessMaster[0], 9, MPI_DOUBLE, 0, 39, MPI_COMM_WORLD);
+	    MPI_Send (&numNodesMaster[0], 3, MPI_INT, 0, 40, MPI_COMM_WORLD);
         }// end if myrank
 
             // Assembling the K_ij
