@@ -330,8 +330,7 @@ while(criterionFEM2 > criterionFEM2_min)
             gradT[0] = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
             gradT[1] = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
 
-            fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro,
-                THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
+            fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
 
             q_Me[0] = 0.0;
             q_Me[1] = 0.0;
@@ -500,6 +499,8 @@ while(criterionFEM2 > criterionFEM2_min)
     i_while ++;
 
 }//end while.
+
+MPI_Finalize();
 
 }//end function.
 
