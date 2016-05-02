@@ -76,9 +76,6 @@ MPI_Comm_size( MPI_COMM_WORLD, &nbproc);
 	std::map<int, Parameter*> region_micro;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
 
 
-if (myrank == 0)
-{
-
 	/*Chargement des paramètres de la struc Parameter contenant les paramètres d'entrées.
 	A chaque éléments de physicals, on lui associe l'élément de "parameters" correspondant. La correspondance est mappé dans linesRegion et surfaceRegion en fonction du type de paramètre
 	*/
@@ -135,8 +132,6 @@ if (myrank == 0)
 	
 	std::vector<double> f_i(nodes_macro.size());
 	f_function(f_i, nodes_macro, elements_macro, region_macro, THERMALFLAG, 0); //utilisation of f_function from fem.cpp file.
-
-}
 
 //-----------------DEBUT DE LA BOUCLE A PARALLELISER-------------------------------
 
