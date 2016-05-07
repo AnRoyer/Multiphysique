@@ -140,7 +140,7 @@ void readMSH(const char *fileName, std::vector<Node*> &nodes, std::vector<Elemen
                 return;
             }
 
-            printf("Reading %d nodes\n", nbNodes);
+            //printf("Reading %d nodes\n", nbNodes);
 
             for (int i = 0 ; i < nbNodes ; i++)
             {
@@ -163,7 +163,7 @@ void readMSH(const char *fileName, std::vector<Node*> &nodes, std::vector<Elemen
                 return;
             }
 
-            printf("Reading %d elements\n", nbElements);
+            //printf("Reading %d elements\n", nbElements);
 
             for (int i = 0 ; i < nbElements ; i++)
             {
