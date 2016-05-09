@@ -89,7 +89,7 @@ struct XMLparam
     std::string value;
 };
 
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type &typeUsed, double &eps);
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type &typeUsed, double &eps, int &methodFE2);
 XMLparam readParam(std::ifstream& fp);
 double readValue(std::ifstream& fp);
 

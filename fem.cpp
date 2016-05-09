@@ -309,6 +309,8 @@ void Average_flux(std::map<Node*, std::vector<double> > &solutionTemperature, st
 {
     gmm::dense_matrix<double> alpha(2,2); // matrice alpha
     gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
+    q_Me[0] = 0.0;
+    q_Me[1] = 0.0;
 
 
     for(unsigned int i = 0; i < elements.size(); i++)//loop over the elements

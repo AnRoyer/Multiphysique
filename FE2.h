@@ -11,7 +11,7 @@ void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro,
          std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro,
          std::vector<Element*> &elements_macro,std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro,
          std::map<Node*, std::vector<double> > &solutionTemperature_macro, std::map<Node*, std::vector<double> > &solutionFlux_macro, 
-		 double eps, int argc, char ** argv);
+		 double eps, int argc, char ** argv, int &methodFE2);
 
 void conductivityTensor(std::vector<double> &q, std::vector<double> &gradT, gmm::dense_matrix<double> &kappa);
 

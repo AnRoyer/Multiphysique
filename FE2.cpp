@@ -21,7 +21,7 @@ void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro,
          std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro,
          std::vector<Element*> &elements_macro, std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro,
          std::map<Node*, std::vector<double> > &solutionTemperature_macro, std::map<Node*, std::vector<double> > &solutionFlux_macro, 
-		 double eps, int argc, char ** argv)
+		 double eps, int argc, char ** argv, int &methodFE2)
 {
 
 // MPI initialization
@@ -38,6 +38,8 @@ double criterionFE2_0 =0;
 std::vector<double> error(nodes_macro.size());
 
 double T_mean;
+int method = methodFE2;
+cout << "method" << method << endl;
 	
 double u1, u2, u3; // Nodal temperatures of an element
 	
@@ -138,6 +140,7 @@ for(unsigned int i = 0; i < physicals_macro.size(); i++)
 
 std::vector<double> f_i(nodes_macro.size());
 f_function(f_i, nodes_macro, elements_macro, region_macro, THERMALFLAG, 0); //utilisation of f_function from fem.cpp file.
+if(method == 2) gmm::scale(f_i,-1);
 
 //-----------------DEBUT DE LA BOUCLE A PARALLELISER-------------------------------
 
@@ -190,6 +193,8 @@ if (myrank == 0) // Travail du maître
 		
 		for (int i = nbproc - 1+k; i < nbElem + nbproc-1; i++)
 		{
+			//cout << "i " << i << endl;
+
 			// Reception d'une sous matrice de la part d'un process a priori inconnu :
 			MPI_Recv (&stiffnessMaster[0], 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
 			source = status.MPI_SOURCE;
@@ -260,6 +265,8 @@ if (myrank == 0) // Travail du maître
 		    }
 		}
 
+		//cout << "qint" << q_int << endl;
+		//cout << "f_i" << f_i << endl;
 		error.clear();
 		for(unsigned int i=0;i<nodes_macro.size();i++)
 		{
@@ -282,8 +289,6 @@ if (myrank == 0) // Travail du maître
 
 		    }
 		}
-
-		//cout << f_i << endl;
 		
 
 		std::vector<double> u_guess_vec(1);
@@ -293,6 +298,16 @@ if (myrank == 0) // Travail du maître
 		{
 		    u_guess_vec = solutionTemperature_macro[nodes_macro[l]];
 		    u_guess[l] = u_guess_vec[0];
+		}
+
+		int flag =1;
+		if(flag)
+		{
+			std::vector<double> flag_temp(nodes_macro.size());
+			gmm::mult(total_stiffness,u_guess,error);
+            gmm::add(flag_temp,f_i,flag_temp);
+			gmm::scale(flag_temp,-1);
+			gmm::add(error,flag_temp,error);
 		}
 
 		if(i_while ==0)
@@ -412,47 +427,208 @@ if(myrank !=0)
 
         gradT[0] = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
         gradT[1] = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
-
-        fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
+		    
+		fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
 
         q_Me[0] = 0.0;
         q_Me[1] = 0.0;
         Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
 
-        conductivityTensor(q_Me, gradT, kappa_e);
-    
-		// Computing elementary stiffness matrix
-        gmm::mult(kappa_e, inverse_J, a0);
+		// Computation of the q_int_e vector (q_int of the element) :
+		q_int_e[0] = gmm::vect_sp(q_Me, gradPhi1);
+		q_int_e[1] = gmm::vect_sp(q_Me, gradPhi2);
+		q_int_e[2] = gmm::vect_sp(q_Me, gradPhi3);
+        gmm::scale(q_int_e,det_J/2);
 
-        gmm::mult(a0, gradPhi1_red, a1);
-        gmm::mult(a0, gradPhi2_red, a2);
-        gmm::mult(a0, gradPhi3_red, a3);
+		if(method == 1)
+		{
+		    conductivityTensor(q_Me, gradT, kappa_e);
+		
+			// Computing elementary stiffness matrix
+		    gmm::mult(kappa_e, inverse_J, a0);
 
-        gmm::mult(inverse_J, gradPhi1_red, b1);
-        gmm::mult(inverse_J, gradPhi2_red, b2);
-        gmm::mult(inverse_J, gradPhi3_red, b3);
+		    gmm::mult(a0, gradPhi1_red, a1);
+		    gmm::mult(a0, gradPhi2_red, a2);
+		    gmm::mult(a0, gradPhi3_red, a3);
 
-        double element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a1, b1);
-        element_stiffness(0, 0) = element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a2, b1);
-        element_stiffness(0, 1) = element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a3, b1);
-        element_stiffness(0, 2) = element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a1, b2);
-        element_stiffness(1, 0) = element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a2, b2);
-        element_stiffness(1, 1) = element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a3, b2);
-        element_stiffness(1, 2) = element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a1, b3);
-        element_stiffness(2, 0) = element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a2, b3);
-        element_stiffness(2, 1) = element_stiffness_temp;
-        element_stiffness_temp = gmm::vect_sp(a3, b3);
-        element_stiffness(2, 2) = element_stiffness_temp;
-        
-        gmm::scale(element_stiffness, 0.5*det_J);
+		    gmm::mult(inverse_J, gradPhi1_red, b1);
+		    gmm::mult(inverse_J, gradPhi2_red, b2);
+		    gmm::mult(inverse_J, gradPhi3_red, b3);
+
+			//Computation of the elementary stiffness matrix
+		    double element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a1, b1);
+		    element_stiffness(0, 0) = element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a2, b1);
+		    element_stiffness(0, 1) = element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a3, b1);
+		    element_stiffness(0, 2) = element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a1, b2);
+		    element_stiffness(1, 0) = element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a2, b2);
+		    element_stiffness(1, 1) = element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a3, b2);
+		    element_stiffness(1, 2) = element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a1, b3);
+		    element_stiffness(2, 0) = element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a2, b3);
+		    element_stiffness(2, 1) = element_stiffness_temp;
+		    element_stiffness_temp = gmm::vect_sp(a3, b3);
+		    element_stiffness(2, 2) = element_stiffness_temp;
+		    
+		    gmm::scale(element_stiffness, 0.5*det_J);
+		}// end if method ==1
+
+		else if(method == 2)
+		{
+			double delta_u = 1e-5;
+
+			std::vector <double> q_int1_plus(3); // Elementary q_int vectors
+			std::vector <double> q_int1_minus(3);
+			std::vector <double> q_int2_plus(3);
+			std::vector <double> q_int2_minus(3);
+			std::vector <double> q_int3_plus(3);
+			std::vector <double> q_int3_minus(3);
+
+		    u1 = temperaturesSlave[0]+delta_u;
+		    u2 = temperaturesSlave[1];
+		    u3 = temperaturesSlave[2];
+		    
+		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
+		    
+		    conditions_micro.meanTemperature = T_mean;
+		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
+		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
+
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
+
+		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
+
+			// Computation of the q_int_e vector (q_int of the element) :
+			q_int1_plus[0] = gmm::vect_sp(q_Me, gradPhi1);
+			q_int1_plus[1] = gmm::vect_sp(q_Me, gradPhi2);
+			q_int1_plus[2] = gmm::vect_sp(q_Me, gradPhi3);
+		    gmm::scale(q_int1_plus,det_J/2);
+
+		    u1 = temperaturesSlave[0]-delta_u;
+		    u2 = temperaturesSlave[1];
+		    u3 = temperaturesSlave[2];
+		    
+			//cout <<  "t1 " << u1 << endl;
+			//cout <<  "t2 " << u2 << endl;
+			//cout <<  "t3 " << u3 << endl;
+		    //T_mean = (1.0/3.0)*(u1 + u2 + u3);
+			//cout << "Tmean " << T_mean << endl;
+		    
+		    conditions_micro.meanTemperature = T_mean;
+		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
+		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
+			//cout << "xgrad " << conditions_micro.xGradient << endl;
+			//cout << "ygrad " << conditions_micro.yGradient << endl;
+
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
+
+		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
+
+			// Computation of the q_int_e vector (q_int of the element) :
+			q_int1_minus[0] = gmm::vect_sp(q_Me, gradPhi1);
+			q_int1_minus[1] = gmm::vect_sp(q_Me, gradPhi2);
+			q_int1_minus[2] = gmm::vect_sp(q_Me, gradPhi3);
+		    gmm::scale(q_int1_minus,det_J/2);
+
+		    u1 = temperaturesSlave[0];
+		    u2 = temperaturesSlave[1]+delta_u;
+		    u3 = temperaturesSlave[2];
+		    
+		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
+		    
+		    conditions_micro.meanTemperature = T_mean;
+		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
+		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
+
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
+
+		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
+
+			// Computation of the q_int_e vector (q_int of the element) :
+			q_int2_plus[0] = gmm::vect_sp(q_Me, gradPhi1);
+			q_int2_plus[1] = gmm::vect_sp(q_Me, gradPhi2);
+			q_int2_plus[2] = gmm::vect_sp(q_Me, gradPhi3);
+		    gmm::scale(q_int2_plus,det_J/2);
+
+		    u1 = temperaturesSlave[0];
+		    u2 = temperaturesSlave[1]-delta_u;
+		    u3 = temperaturesSlave[2];
+		    
+		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
+		    
+		    conditions_micro.meanTemperature = T_mean;
+		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
+		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
+
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
+
+		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
+
+			// Computation of the q_int_e vector (q_int of the element) :
+			q_int2_minus[0] = gmm::vect_sp(q_Me, gradPhi1);
+			q_int2_minus[1] = gmm::vect_sp(q_Me, gradPhi2);
+			q_int2_minus[2] = gmm::vect_sp(q_Me, gradPhi3);
+		    gmm::scale(q_int2_minus,det_J/2);
+
+		    u1 = temperaturesSlave[0];
+		    u2 = temperaturesSlave[1];
+		    u3 = temperaturesSlave[2]+delta_u;
+		    
+		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
+		    
+		    conditions_micro.meanTemperature = T_mean;
+		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
+		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
+
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
+
+		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
+
+			// Computation of the q_int_e vector (q_int of the element) :
+			q_int3_plus[0] = gmm::vect_sp(q_Me, gradPhi1);
+			q_int3_plus[1] = gmm::vect_sp(q_Me, gradPhi2);
+			q_int3_plus[2] = gmm::vect_sp(q_Me, gradPhi3);
+		    gmm::scale(q_int3_plus,det_J/2);
+
+		    u1 = temperaturesSlave[0];
+		    u2 = temperaturesSlave[1];
+		    u3 = temperaturesSlave[2]-delta_u;
+		    
+		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
+		    
+		    conditions_micro.meanTemperature = T_mean;
+		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
+		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
+
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps);
+
+		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro);
+
+			// Computation of the q_int_e vector (q_int of the element) :
+			q_int3_minus[0] = gmm::vect_sp(q_Me, gradPhi1);
+			q_int3_minus[1] = gmm::vect_sp(q_Me, gradPhi2);
+			q_int3_minus[2] = gmm::vect_sp(q_Me, gradPhi3);
+		    gmm::scale(q_int3_minus,det_J/2);
+
+			//Computation of the elementary stiffness matrix
+		    element_stiffness(0, 0) = q_int1_plus[0]-q_int1_minus[0];
+		    element_stiffness(0, 1) = q_int2_plus[0]-q_int2_minus[0];
+		    element_stiffness(0, 2) = q_int3_plus[0]-q_int3_minus[0];
+		    element_stiffness(1, 0) = q_int1_plus[1]-q_int1_minus[1];
+		    element_stiffness(1, 1) = q_int2_plus[1]-q_int2_minus[1];
+		    element_stiffness(1, 2) = q_int3_plus[1]-q_int3_minus[1];
+		    element_stiffness(2, 0) = q_int1_plus[2]-q_int1_minus[2];
+		    element_stiffness(2, 1) = q_int2_plus[2]-q_int2_minus[2];
+		    element_stiffness(2, 2) = q_int3_plus[2]-q_int3_minus[2];
+
+			gmm::scale(element_stiffness, 1./(2*delta_u));
+		}//end if method ==2
         
     	stiffnessMaster[0] = element_stiffness(0, 0);
     	stiffnessMaster[1] = element_stiffness(0, 1);
@@ -466,14 +642,6 @@ if(myrank !=0)
 
         MPI_Send (&stiffnessMaster[0], 9, MPI_DOUBLE, 0, 39, MPI_COMM_WORLD);
 		MPI_Send (&numNodesMaster[0], 3, MPI_INT, 0, 40, MPI_COMM_WORLD);
-
-		// Computation of the q_int_e vector (q_int of the element) :
-
-		q_int_e[0] = gmm::vect_sp(q_Me, gradPhi1);
-		q_int_e[1] = gmm::vect_sp(q_Me, gradPhi2);
-		q_int_e[2] = gmm::vect_sp(q_Me, gradPhi3);
-        gmm::scale(q_int_e,det_J/2);
-
 		MPI_Send (&q_int_e[0], 3, MPI_DOUBLE, 0, 41, MPI_COMM_WORLD);
 
     }//end while subprocesses.

@@ -43,19 +43,21 @@ int main(int argc, char **argv)
     Periodique conditions;
     Micro micro;
     double eps = 0;
+	int methodFE2 = 0;
 
     Type type_micro;
     vector<Parameter*> parameters_micro;
     Periodique conditions_micro;
     Micro micro_micro;
     double eps_micro = 0;
+	int methodFE2_micro = 0; //no signification !!
 
     //lecture des PHYs
-    readPHY(argv[2], parameters, conditions, micro, type, eps);
+    readPHY(argv[2], parameters, conditions, micro, type, eps, methodFE2);
 
     if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
     {
-        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, type_micro, eps_micro);
+        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, type_micro, eps_micro, methodFE2_micro);
     }
 
     vector<Node*> nodes;
@@ -207,7 +209,7 @@ int main(int argc, char **argv)
     if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
     {
         FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro,
-            conditions_micro, nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, eps, argc, argv);
+            conditions_micro, nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, eps, argc, argv, methodFE2);
 		cout << "The problem has been solved in two scales." << endl;
 		if(type == FE2withDIRICHLET) cout << "DIRICHLET conditions have been used." << endl;
 		if(type == FE2withVONNEUMANN) cout << "VONNEUMANN conditions have been used." << endl;
