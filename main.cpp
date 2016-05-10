@@ -1,7 +1,9 @@
 #include <iostream>
 #include <cstdio>
+#include <stdlib.h>
 #include <vector>
 #include <map>
+#include <mpi.h>
 #include <string>
 #include "gmshio.h"
 #include "physicalio.h"
@@ -37,6 +39,22 @@ int main(int argc, char **argv)
 
 	if(type == DIRICHLET || type == PERIODIC || type == VONNEUMANN)
 	{
+		// MPI initialization
+		MPI_Init(&argc, &argv);
+		MPI_Status status;
+		int nbproc, myrank ;
+		MPI_Comm_rank( MPI_COMM_WORLD, &myrank);
+		MPI_Comm_size( MPI_COMM_WORLD, &nbproc);
+
+		if(nbproc !=1)
+		{
+			if(myrank == 0) cout << endl << "Error : FE1 method must be run with only 1 process !" << endl << endl;
+			MPI_Finalize();
+			return 1;
+		}
+
+		MPI_Finalize();
+
 		cout << endl;
 		cout << "\t############################################################" << endl;
 		cout << "\t############################################################" << endl;
@@ -194,6 +212,9 @@ int main(int argc, char **argv)
 		if(type == VONNEUMANN) cout << "The problem has been solved in one scale using VONNEUMANN conditions." << endl;
 		if(type == PERIODIC) cout << "The problem has been solved in one scale using PERIODIC conditions." << endl;
 		cout << endl;
+		cout << "Press Enter to show the solution." << endl;
+		std::cin.ignore();
+		system("gmsh l.msh solutionTemperature.pos solutionFlux.pos &");	
 	}
 
     return 0;

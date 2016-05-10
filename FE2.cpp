@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdio>
+#include <stdlib.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -31,6 +32,13 @@ MPI_Status status;
 int nbproc, myrank ;
 MPI_Comm_rank( MPI_COMM_WORLD, &myrank);
 MPI_Comm_size( MPI_COMM_WORLD, &nbproc);
+
+if(nbproc ==1)
+{
+    cout << endl << "Error: FE2 method must be run with at least 2 processes !" << endl << endl;
+    MPI_Finalize();
+    return;
+}
 
 //Displaying information
 if(myrank == 0)
@@ -152,7 +160,7 @@ if(myrank == 0)
 
 //criterion for the overall FEM2 method.
 double criterionFE2 = 10000; 
-double criterionFE2_min = 1e-5;
+double criterionFE2_min = 1e-4;
 double criterionFE2_0 =0;
 std::vector<double> error(nodes_macro.size());
 
@@ -285,7 +293,7 @@ if (myrank == 0) // Travail du maître
     int i_while = 0;
 	while(criterionFE2 > criterionFE2_min)
 	{
-		cout << "Running Newton Raphson on the RVEs..." << endl;
+		cout << "Running Newton Raphson on the RVEs for macroscopic iteration " << i_while+1 << " ..." << endl;
 		gmm::clear(total_stiffness);
 		std::vector<double> f_i(nodes_macro.size());
 		f_function(f_i, nodes_macro, elements_macro, region_macro, THERMALFLAG, 0); //utilisation of f_function from fem.cpp file.
@@ -324,6 +332,11 @@ if (myrank == 0) // Travail du maître
 		for (int i = nbproc - 1+k; i < nbElem + nbproc-1; i++)
 		{
 			//cout << "i " << i << endl;
+			if(i>=(nbElem-k-1)/5+k && i<(nbElem-k-1)/5 +1+k) cout << " 20% Done..." << endl;
+			else if(i>=2*(nbElem-k-1)/5+k && i<2*(nbElem-k-1)/5 +1+k) cout << " 40% Done..." << endl;
+			else if(i>=3*(nbElem-k-1)/5+k && i<3*(nbElem-k-1)/5 +1+k) cout << " 60% Done..." << endl;
+			else if(i>=4*(nbElem-k-1)/5+k && i<4*(nbElem-k-1)/5 +1+k) cout << " 80% Done..." << endl;
+			else if(i>=(nbElem-k-1)+k && i<(nbElem-k-1)+1+k) cout << " 100% Done. Macroscopic iteration " << i_while +1 << " is finished." << endl;
 
 			// Reception d'une sous matrice de la part d'un process a priori inconnu :
 			MPI_Recv (&stiffnessMaster[0], 9, MPI_DOUBLE, MPI_ANY_SOURCE, 39, MPI_COMM_WORLD, & status);
@@ -446,19 +459,22 @@ if (myrank == 0) // Travail du maître
 			if(criterionFE2_0 < 1e-6) criterionFE2_0 =1; //a etudier
 		}
 		criterionFE2 = gmm::vect_norm2(error);
-		criterionFE2 = criterionFE2/criterionFE2_0;
-		cout << "FE2 relative residue = " << criterionFE2 << endl; //acorriger
+		if(criterionFE2_0 > criterionFE2_min)
+		{
+			criterionFE2 = criterionFE2/criterionFE2_0;
+		}
+		cout << "FE2 relative residue = " << criterionFE2 << endl << endl; //acorriger
 
 		if(criterionFE2 > criterionFE2_min)
 		{
 		    #ifdef GMM_USES_MUMPS
-		        std::cout << "solving linear system with MUMPS\n";
+		        //std::cout << "solving linear system with MUMPS\n";
 		        gmm::csr_matrix<double> total_stiffness_csr; //à changer
 		        gmm::copy(total_stiffness,total_stiffness_csr);
 		        gmm::MUMPS_solve(total_stiffness_csr, u_guess, f_i);
 				//cout << u_guess << endl;
 		    #else
-		        std::cout << "solving linear system with gmm::lu_solve\n";
+		        std::cout << "solving linear system with gmm::lu_solve !\n";
 		        gmm::lu_solve(total_stiffness, u_guess, f_i);
 		    #endif
 
@@ -490,7 +506,7 @@ if (myrank == 0) // Travail du maître
 		
         i_while ++;
 
-		if(criterionFE2 > 0.1 && i_while == 5)
+		if(criterionFE2 > 0.1 && i_while == 3)
 		{
 			cout << endl;
 			cout << "Anisotropy on the microscopic domain is too important for method 1." << endl;
@@ -517,7 +533,11 @@ if (myrank == 0) // Travail du maître
 	if(type == FE2withDIRICHLET) cout << "The problem has been solved in two scales with DIRICHLET conditions on the macroscopic domain." << endl;
 	if(type == FE2withVONNEUMANN) cout <<"The problem has been solved in two scales with VONNEUMANN conditions on the macroscopic domain." << endl;
 	if(type == FE2withPERIODIC) cout <<  "The problem has been solved in two scales with PERIODIC conditions on the macroscopic domain."  << endl;
-	cout << endl;	
+	cout << endl;
+    //cout << "Press enter to display the solution." << endl;
+	//system("gmsh l.msh solutionTemperature.pos &");
+    //std::cin.ignore();
+	
 
 }//end master.
 
