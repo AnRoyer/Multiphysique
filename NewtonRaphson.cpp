@@ -917,7 +917,7 @@ void Tangent_Stiffness_Matrix(std::vector<double> &theta_k, std::map<int, Parame
 
 
 /*----------------------END CRITERION ROUTINE---------------------------*/
-bool End_Criterion(std::vector<double> &RHS, double normRHS0 , double eps)
+bool End_Criterion(std::vector<double> &RHS, double normRHS0 , double eps, Type type)
 {
     //Threshold value
     double criterion = gmm::vect_norm2(RHS);
@@ -927,7 +927,7 @@ bool End_Criterion(std::vector<double> &RHS, double normRHS0 , double eps)
     }
     //cout << criterion << endl;
     //cout << normRHS0 << " " << gmm::vect_norm2(RHS) << endl;
-    //cout << "Relative residue = " << gmm::vect_norm2(RHS)/normRHS0 <<endl;
+    if(type == DIRICHLET || type == VONNEUMANN || type == PERIODIC) cout << "Newton Raphson relative residue = " << gmm::vect_norm2(RHS)/normRHS0 <<endl;
     if(criterion >eps)
         return false;
 

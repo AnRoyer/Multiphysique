@@ -1,4 +1,4 @@
-#include <iostream>
+	#include <iostream>
 #include <cstdio>
 #include <vector>
 #include <map>
@@ -12,10 +12,10 @@ using namespace std;
 /*---------------------------------------------------Code de calcul FEM-------------------------------------------------------*/
 
 
-//type = 0 : thermique, type = 1 = électrique
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters,
-         std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux, FemFlag type,
-         FemFlag method, Periodique &conditions, double eps)
+         std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux, 
+		 FemFlag thermalOrElectrical,
+         FemFlag method, Periodique &conditions, double eps, Type type)
 {
     //Boundaries
     map<int, Parameter*> region;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
@@ -137,7 +137,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
     //f vector
     vector<double> f(nodes.size());
-    f_function(f, nodes, elements, region, type, 0); //dernier paramètre de la fonction f nul =>
+    f_function(f, nodes, elements, region, thermalOrElectrical, 0); //dernier paramètre de la fonction f nul =>
 
         //Theta_K and delta_theta_k vector
     std::vector<double> theta_k(nodes.size(),1);
@@ -216,7 +216,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             normRHS0 = gmm::vect_norm2(RHS);
 
         //Check the convergence criterion
-        Criterion = End_Criterion(RHS, normRHS0, eps);
+        Criterion = End_Criterion(RHS, normRHS0, eps, type);
         //cout << "Iteration number " << iter << endl;
         iter++;
     }
@@ -240,7 +240,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
 
 
 /* fonction permettant de calculer le vecteur f ainsi que la condition periodique sur le noeud 1 (condition sur la temperature moyenne)*/
-void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,Parameter*> &region, FemFlag type, int constantProperty)
+void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::map<int,Parameter*> &region, FemFlag thermalOrElectrical, int constantProperty)
 {
     double cons;
     for(unsigned int i = 0; i < elements.size(); i++)
@@ -251,11 +251,11 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
         }
         else
         {
-            if(type == THERMALFLAG)
+            if(thermalOrElectrical == THERMALFLAG)
             {
                 cons = region[elements[i]->region]->thermalGeneration;
             }
-            else if(type == ELECTRICFLAG)
+            else if(thermalOrElectrical == ELECTRICFLAG)
             {
                 cons = region[elements[i]->region]->electricalGeneration;
             }
@@ -305,7 +305,7 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
     }
 }
 
-void Average_flux(std::map<Node*, std::vector<double> > &solutionTemperature, std::map<int,Parameter*> &region, std::vector<Element*> &elements, std::vector<double> &q_Me, double vol)
+void Average_flux(std::map<Node*, std::vector<double> > &solutionTemperature, std::map<int,Parameter*> &region, std::vector<Element*> &elements, std::vector<double> &q_Me, double vol, FemFlag thermalOrElectrical)
 {
     gmm::dense_matrix<double> alpha(2,2); // matrice alpha
     gmm::dense_matrix<double> beta(2,2); // matrice beta pour la conductivité
@@ -327,37 +327,72 @@ void Average_flux(std::map<Node*, std::vector<double> > &solutionTemperature, st
             double y2 = n2->y;
             double x3 = n3->x;
             double y3 = n3->y;
-            double qint_I; //Contribution of a given node to qint
 
-            if(region[elements[i]->region]->thermalConductivity[0]->name == "alpha")
-            {
-                alpha(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
-                alpha(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
-                alpha(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
-                alpha(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
-            }
-            else if(region[elements[i]->region]->thermalConductivity[1]->name == "alpha")
-            {
-                alpha(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
-                alpha(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
-                alpha(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
-                alpha(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
-            }
+			if(thermalOrElectrical == THERMALFLAG)
+			{
+		        if(region[elements[i]->region]->thermalConductivity[0]->name == "alpha")
+		        {
+		            alpha(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+		            alpha(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+		            alpha(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+		            alpha(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+		        }
+		        else if(region[elements[i]->region]->thermalConductivity[1]->name == "alpha")
+		        {
+		            alpha(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+		            alpha(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+		            alpha(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+		            alpha(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+		        }
 
-            if(region[elements[i]->region]->thermalConductivity[0]->name == "beta")
-            {
-                beta(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
-                beta(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
-                beta(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
-                beta(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
-            }
-            else if(region[elements[i]->region]->thermalConductivity[1]->name == "beta")
-            {
-                beta(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
-                beta(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
-                beta(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
-                beta(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
-            }
+		        if(region[elements[i]->region]->thermalConductivity[0]->name == "beta")
+		        {
+		            beta(0,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][0];
+		            beta(0,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[0][1];
+		            beta(1,0) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][0];
+		            beta(1,1) = region[elements[i]->region]->thermalConductivity[0]->conductivity[1][1];
+		        }
+		        else if(region[elements[i]->region]->thermalConductivity[1]->name == "beta")
+		        {
+		            beta(0,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][0];
+		            beta(0,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[0][1];
+		            beta(1,0) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][0];
+		            beta(1,1) = region[elements[i]->region]->thermalConductivity[1]->conductivity[1][1];
+		        }
+			}//end if thermalflag
+
+			else if(thermalOrElectrical == ELECTRICFLAG)
+			{
+		        if(region[elements[i]->region]->electricalConductivity[0]->name == "alpha")
+		        {
+		            alpha(0,0) = region[elements[i]->region]->electricalConductivity[0]->conductivity[0][0];
+		            alpha(0,1) = region[elements[i]->region]->electricalConductivity[0]->conductivity[0][1];
+		            alpha(1,0) = region[elements[i]->region]->electricalConductivity[0]->conductivity[1][0];
+		            alpha(1,1) = region[elements[i]->region]->electricalConductivity[0]->conductivity[1][1];
+		        }
+		        else if(region[elements[i]->region]->electricalConductivity[1]->name == "alpha")
+		        {
+		            alpha(0,0) = region[elements[i]->region]->electricalConductivity[1]->conductivity[0][0];
+		            alpha(0,1) = region[elements[i]->region]->electricalConductivity[1]->conductivity[0][1];
+		            alpha(1,0) = region[elements[i]->region]->electricalConductivity[1]->conductivity[1][0];
+		            alpha(1,1) = region[elements[i]->region]->electricalConductivity[1]->conductivity[1][1];
+		        }
+
+		        if(region[elements[i]->region]->electricalConductivity[0]->name == "beta")
+		        {
+		            beta(0,0) = region[elements[i]->region]->electricalConductivity[0]->conductivity[0][0];
+		            beta(0,1) = region[elements[i]->region]->electricalConductivity[0]->conductivity[0][1];
+		            beta(1,0) = region[elements[i]->region]->electricalConductivity[0]->conductivity[1][0];
+		            beta(1,1) = region[elements[i]->region]->electricalConductivity[0]->conductivity[1][1];
+		        }
+		        else if(region[elements[i]->region]->electricalConductivity[1]->name == "beta")
+		        {
+		            beta(0,0) = region[elements[i]->region]->electricalConductivity[1]->conductivity[0][0];
+		            beta(0,1) = region[elements[i]->region]->electricalConductivity[1]->conductivity[0][1];
+		            beta(1,0) = region[elements[i]->region]->electricalConductivity[1]->conductivity[1][0];
+		            beta(1,1) = region[elements[i]->region]->electricalConductivity[1]->conductivity[1][1];
+		        }
+			}//end if electricalflag
 
             std::vector<double> theta_nodes(3);//Temperature at nodes
             std::vector<double> sol;

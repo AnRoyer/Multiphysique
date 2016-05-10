@@ -87,43 +87,43 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         {
                             if(param.value == "dirichlet")
                             {
-                                cout << "Reading a dirichlet phy file ..." << endl;
+                                //cout << "Reading a dirichlet phy file ..." << endl;
                                 type = DIRICHLET;
                                 conditions.exist = false;
                             }
                             else if(param.value == "periodic")
                             {
-                                cout << "Reading a periodic phy file ..." << endl;
+                                //cout << "Reading a periodic phy file ..." << endl;
                                 type = PERIODIC;
                                 conditions.exist = true;
                             }
                             else if(param.value == "vonNeumann")
                             {
-                                cout << "Reading a von Neumann phy file ..." << endl;
+                                //cout << "Reading a von Neumann phy file ..." << endl;
                                 type = VONNEUMANN;
                                 conditions.exist = false;
                             }
                             else if(param.value == "fe2D")
                             {
-                                cout << "Reading a FE2 with dirichlet phy file ..." << endl;
+                                //cout << "Reading a FE2 with dirichlet phy file ..." << endl;
                                 type = FE2withDIRICHLET;
                                 conditions.exist = false;
                             }
                             else if(param.value == "fe2V")
                             {
-                                cout << "Reading a FE2 with von Neumann phy file ..." << endl;
+                                //cout << "Reading a FE2 with von Neumann phy file ..." << endl;
                                 type = FE2withVONNEUMANN;
                                 conditions.exist = false;
                             }
                             else if(param.value == "fe2P")
                             {
-                                cout << "Reading a FE2 with periodic phy file ..." << endl;
+                                //cout << "Reading a FE2 with periodic phy file ..." << endl;
                                 type = FE2withPERIODIC;
                                 conditions.exist = true;
                             }
                             else
                             {
-                                cout << "Error: unknown type" << endl;
+                                //cout << "Error: unknown type" << endl;
                             }
                         }
                         else if(param.name == "microMSH")
@@ -408,7 +408,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
         methodFE2 = methodFE2Read;
     }
 
-    cout << "End of the file reaches" << endl;
+    //cout << "End of the file reaches" << endl;
 
     fp.close();
 }
