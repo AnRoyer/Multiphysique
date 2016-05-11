@@ -142,6 +142,10 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         {
                             sscanf(param.value.c_str(), "%d", &methodFE2Read);
                         }
+                        /*else if(param.name == "nature")
+                        {
+                            sscanf(param.value.c_str(), "%p", &nature);
+                        }*/
                         else
                         {
                             cout << "Error: unknown parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;

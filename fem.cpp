@@ -1,4 +1,4 @@
-	#include <iostream>
+#include <iostream>
 #include <cstdio>
 #include <vector>
 #include <map>
@@ -177,7 +177,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
         }
     }
 
-    if(method == DIRICHLETFLAG)//Including the Dirichlet condition on theta_k
+    if(method == DIRICHLETFLAG && thermalOrElectrical == THERMALFLAG)//Including the Dirichlet condition on theta_k
     {
         for(unsigned int l = 0; l < elements.size(); l++)
         {
@@ -190,6 +190,26 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                         if(region[elements[l]->region]->temperature != -1)
                         {
                             theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->temperature;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if(method == DIRICHLETFLAG && thermalOrElectrical == ELECTRICFLAG)//Including the Dirichlet condition on theta_k
+    {
+        for(unsigned int l = 0; l < elements.size(); l++)
+        {
+            if(elements[l]->type == 1)//If line
+            {
+                if(region.count(elements[l]->region) == 1)
+                {
+                    for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
+                    {
+                        if(region[elements[l]->region]->voltage != -1)
+                        {
+                            theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->voltage;
                         }
                     }
                 }

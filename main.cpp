@@ -20,6 +20,14 @@ int main(int argc, char **argv)
         return 1;
     }
 
+//----------------------------------------------------FLAG PERMETTANT DE CHOISIR ENTRE THERMIQUE OU ELECTRIQUE
+	FemFlag thermalOrElectrical = THERMALFLAG;
+//------------------------------------------------------------------------------------------------------------
+
+//Il serait utile d'ajouter un paramètre dans le .phy (de type Nature par exemple) afin de pouvoir choisir entre thermique ou électrique.
+//J'ai essayé mais je ne suis pas arriver à trouver comment faire pour lire un paramètre de type Nature.
+
+
     Type type;
     vector<Parameter*> parameters;
     Periodique conditions;
@@ -102,6 +110,8 @@ int main(int argc, char **argv)
 	{
     //Affichage des infos principales
 		cout << endl;
+		if(thermalOrElectrical == THERMALFLAG) cout << "SOLVING A THERMAL PROBLEM." << endl << endl;
+		if(thermalOrElectrical == ELECTRICFLAG) cout << "SOLVING AN ELECTRICAL PROBLEM." << endl << endl;
 		cout << "Read " << nodes.size() << " nodes and " << elements.size() << " elements." << endl << endl;
 		if(type == DIRICHLET) cout << "Calling the FE1 method with DIRICHLET conditions." << endl;
 		if(type == VONNEUMANN) cout << "Calling the FE1 method with VONNEUMANN conditions." << endl;
@@ -109,10 +119,15 @@ int main(int argc, char **argv)
 		cout << endl;
 	}
 
-    map<Node*, vector<double> > solutionTemperature;
-    map<Node*, vector<double> > solutionFlux;
-    map<Node*, vector<double> > solutionTemperature_micro;
-    map<Node*, vector<double> > solutionFlux_micro;
+	map<Node*, vector<double> > solutionTemperature;
+	map<Node*, vector<double> > solutionFlux;
+	map<Node*, vector<double> > solutionTemperature_micro;
+	map<Node*, vector<double> > solutionFlux_micro;
+
+	map<Node*, vector<double> > solutionPotential;
+	map<Node*, vector<double> > solutionCurrent;
+	map<Node*, vector<double> > solutionPotential_micro;
+	map<Node*, vector<double> > solutionCurrent_micro;
 
 	/*if(type == DIRICHLET || type == PERIODIC || type == VONNEUMANN)
 	{
@@ -182,39 +197,72 @@ int main(int argc, char **argv)
     }*/
 
     //Initial guess of the temperature field, reading macro.msh and macro.phy. The initial guess will correspond to solutionTemperature_macro.pos and will be run in DIRICHLET (see the macro.phy)
-    if(type == PERIODIC || type == FE2withPERIODIC)
-    {
-        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions, eps, type);
-    }
-    else if(type == DIRICHLET || type == FE2withDIRICHLET)
-    {
-        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions, eps, type);
-    }
-    else if(type == VONNEUMANN || type == FE2withVONNEUMANN)
-    {
-        fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions, eps, type);
-    }
+
+	if(thermalOrElectrical == THERMALFLAG)
+	{
+		if(type == PERIODIC || type == FE2withPERIODIC)
+		{
+		    fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions, eps, type);
+		}
+		else if(type == DIRICHLET || type == FE2withDIRICHLET)
+		{
+		    fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions, eps, type);
+		}
+		else if(type == VONNEUMANN || type == FE2withVONNEUMANN)
+		{
+		    fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions, eps, type);
+		}
+	}
+	else if(thermalOrElectrical == ELECTRICFLAG)
+	{
+		if(type == PERIODIC || type == FE2withPERIODIC)
+		{
+		    fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, PERIODICFLAG, conditions, eps, type);
+		}
+		else if(type == DIRICHLET || type == FE2withDIRICHLET)
+		{
+		    fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, DIRICHLETFLAG, conditions, eps, type);
+		}
+		else if(type == VONNEUMANN || type == FE2withVONNEUMANN)
+		{
+		    fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, VONNEUMANNFLAG, conditions, eps, type);
+		}
+	}
 
     //FE2 method.
-    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
+    if(thermalOrElectrical == THERMALFLAG && (type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC))
     {
         FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro,
             conditions_micro, nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, eps, argc, argv,
 			methodFE2, THERMALFLAG, type);
     }
+    else if(thermalOrElectrical == ELECTRICFLAG && (type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC))
+    {
+        FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionPotential_micro, solutionCurrent_micro,
+            conditions_micro, nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, eps, argc, argv,
+			methodFE2, ELECTRICFLAG, type);
+    }
 
 	if(type == DIRICHLET || type == VONNEUMANN || type == PERIODIC)
 	{
-		writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
-		writeMSH((char*)"solutionFlux.pos", solutionFlux);
+		if(thermalOrElectrical == THERMALFLAG)
+		{
+			writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
+			writeMSH((char*)"solutionFlux.pos", solutionFlux);
+		}
+		else if(thermalOrElectrical == ELECTRICFLAG)
+		{
+			writeMSH((char*)"solutionPotential.pos", solutionPotential);
+			writeMSH((char*)"solutionCurrent.pos", solutionCurrent);
+		}
 		cout << endl;
 		if(type == DIRICHLET) cout << "The problem has been solved in one scale using DIRICHLET conditions." << endl;
 		if(type == VONNEUMANN) cout << "The problem has been solved in one scale using VONNEUMANN conditions." << endl;
 		if(type == PERIODIC) cout << "The problem has been solved in one scale using PERIODIC conditions." << endl;
 		cout << endl;
-		cout << "Press Enter to show the solution." << endl;
+		/*cout << "Press Enter to show the solution." << endl;
 		std::cin.ignore();
-		system("gmsh l.msh solutionTemperature.pos solutionFlux.pos &");	
+		system("gmsh l.msh solutionTemperature.pos &");	*/
 	}
 
     return 0;

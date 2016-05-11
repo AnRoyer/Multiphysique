@@ -9,6 +9,7 @@ enum Type
     FE2withDIRICHLET,
     FE2withVONNEUMANN,
     FE2withPERIODIC,
+		COUPLING,
     DEFAULTTYPE
 };
 

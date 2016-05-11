@@ -41,7 +41,7 @@ if(nbproc ==1)
 }
 
 //Displaying information
-if(myrank == 0)
+if(myrank == 0)// process 0 will take care of all the displaying.
 {
 	cout << endl;
     cout << "\t############################################################" << endl;
@@ -66,14 +66,24 @@ if(myrank == 0)
 
     //Affichage des infos principales
 
-	if(type == FE2withDIRICHLET) cout << "Calling the FE2 method with DIRICHLET conditions on the macroscopic domain." << endl;
-	if(type == FE2withVONNEUMANN) cout << "Calling the FE2 method with VONNEUMANN conditions on the macroscopic domain." << endl;
-	if(type == FE2withPERIODIC) cout << "Calling the FE2 method with PERIODIC conditions on the macroscopic domain." << endl;
+	if(thermalOrElectrical == THERMALFLAG) cout << "SOLVING A THERMAL PROBLEM." << endl;
+	if(thermalOrElectrical == ELECTRICFLAG) cout << "SOLVING AN ELECTRICAL PROBLEM." << endl;
+	if(type == FE2withDIRICHLET) cout << "Calling the FE2 method with DIRICHLET conditions." << endl;
+	if(type == FE2withVONNEUMANN) cout << "Calling the FE2 method with VONNEUMANN conditions." << endl;
+	if(type == FE2withPERIODIC) cout << "Calling the FE2 method with PERIODIC conditions." << endl;
     cout << endl;
+
+}// end of displaying
+
+
+
+//-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY
+/*if(myrank == 0)// process 0 will take care of all the displaying.
+{
     //cout << "Reads " << nodes_macro.size() << " nodes and " << elements_macro.size() << " elements for the macroscopic domain." << endl;
     //cout << "Reads " << nodes_micro.size() << " nodes and " << elements_micro.size() << " elements for the microscopic domain." << endl << endl;
 
-    /*cout << "For the macroscopic domain:" << endl;
+    cout << "For the macroscopic domain:" << endl;
 
     for(unsigned int i = 0; i < parameters_macro.size(); i++)
     {
@@ -155,16 +165,14 @@ if(myrank == 0)
 	        }
 	    }
 	}
-	cout << endl << endl;*/
-}// end of displaying
+	cout << endl << endl;
+}*/
+//-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY-----PARAMETERS DISPLAY
 
-//criterion for the overall FEM2 method.
-double criterionFE2 = 10000; 
-double criterionFE2_min = 1e-4;
-double criterionFE2_0 =0;
-std::vector<double> error(nodes_macro.size());
 
-double T_mean;
+
+
+//Flag defining which FE2 method will be used.
 int method = methodFE2;
 
 if(myrank == 0)
@@ -172,9 +180,24 @@ if(myrank == 0)
 	if(method ==1) cout << "Using method 1 for assembling the stiffness matrix." << endl;
 	else if(method ==2) cout << "Using method 2 for assembling the stiffness matrix." << endl;
 	cout << endl;
+	cout << "-----------------------------" << endl;
 }
-	
-double u1, u2, u3; // Nodal temperatures of an element
+
+
+//Error and criterion for the FE2 method.
+std::vector<double> error(nodes_macro.size());
+double criterionFE2 = 1; 
+double criterionFE2_0 =0;
+double criterionFE2_old = 0; 
+double criterionFE2_min = 1e-6; //Is initiated to 1e-6 but will automatically grow if method 2 is not converging.
+
+double u1, u2, u3; // Nodal temperatures of an element.
+double T_mean; // Mean temperature of an element.
+std::vector<double> gradT(2);// Mean gradient over an element.
+std::vector<double> q_Me(2);   // Mean flux over an element.
+gmm::dense_matrix<double> kappa_e(2,2);// Conductivity of an element.
+gmm::dense_matrix<double> element_stiffness(3, 3); // Stiffness matrix of an element.
+std::vector <double> q_int_e(3); // Elementary q_int vector
 	
 gmm::dense_matrix<double> J(2, 2); // Jacobian matrix
 gmm::dense_matrix<double> inverse_J(2, 2); // Its inverse
@@ -194,15 +217,6 @@ gradPhi2_red[1] = 0.0;
 gradPhi3_red[0] = 0.0;
 gradPhi3_red[1] = 1.0;
 
-std::vector<double> q_Me(2);   // Flux moyen sur l'élément
-
-std::vector<double> gradT(2);// Gradient moyen
-gmm::dense_matrix<double> kappa_e(2,2);// Conductivité élémentaire.
-
-gmm::dense_matrix<double> element_stiffness(3, 3); // Matrix of the elementary stiffness K_e
-gmm::dense_matrix<double> total_stiffness(nodes_macro.size(), nodes_macro.size()); // Matrix of the stiffness for the whole domain K
-
-
 gmm::dense_matrix<double> a0(2, 2); // kappa_e_e times inverse of J in Eq. (9) of ddl 4 group B
 std::vector<double> a1(2); // a1 times gradPhi_1
 std::vector<double> a2(2); // a1 times gradPhi_2
@@ -211,16 +225,13 @@ std::vector<double> b1(2); // inverse of J times gradPhi_i
 std::vector<double> b2(2); // inverse of J times gradPhi_2
 std::vector<double> b3(2); // inverse of J times gradPhi_3
 
-std::vector <double> q_int_e(3); // Elementary q_int vector
+gmm::dense_matrix<double> total_stiffness(nodes_macro.size(), nodes_macro.size()); // Matrix of the stiffness for the whole domain K
 std::vector <double> q_int(nodes_macro.size());
 
 std::map<int, Parameter*> region_micro;//Stock le lien entre le numéro du physical de msh (stocker dans "physicals") et la valeur du parametre de "parametres" pour les régions de dimension 1 (ligne)
 
 
-/*Chargement des paramètres de la struc Parameter contenant les paramètres d'entrées.
-A chaque éléments de physicals, on lui associe l'élément de "parameters" correspondant. La correspondance est mappé dans linesRegion et surfaceRegion en fonction du type de paramètre
-*/
-
+//Loading parameters.
 for(unsigned int i = 0; i < physicals_micro.size(); i++)
 {
     for(unsigned int j = 0; j < parameters_micro.size(); j++)
@@ -239,19 +250,6 @@ for(unsigned int i = 0; i < physicals_micro.size(); i++)
     }
 }
 
-double vol_micro=0;
-std::vector<double> c(nodes_micro.size());
-
-f_function(c, nodes_micro, elements_micro, region_micro, THERMALFLAG, 1);
-
-for(unsigned int j=0; j<nodes_micro.size(); j++)
-{
-    vol_micro += c[j];
-}
-
-//cout << "vol_micro " << vol_micro << endl;
-
-//Computation of the f_i vector function of the heat generation in the macro domain. region_macro has to be initialized as in the fem function.
 map<int, Parameter*> region_macro;
 for(unsigned int i = 0; i < physicals_macro.size(); i++)
 {
@@ -271,9 +269,24 @@ for(unsigned int i = 0; i < physicals_macro.size(); i++)
     }
 }
 
+
+//Computation of the microscopic volume.
+double vol_micro=0;
+std::vector<double> c(nodes_micro.size());
+
+f_function(c, nodes_micro, elements_micro, region_micro, thermalOrElectrical, 1); //FemFlag is obsolete !
+
+for(unsigned int j=0; j<nodes_micro.size(); j++)
+{
+    vol_micro += c[j];
+}
+
+
+//Computation of the f_i vector function of the heat generation in the macro domain.
 std::vector<double> f_i(nodes_macro.size());
-f_function(f_i, nodes_macro, elements_macro, region_macro, THERMALFLAG, 0); //utilisation of f_function from fem.cpp file.
-if(method == 2) gmm::scale(f_i,-1);
+f_function(f_i, nodes_macro, elements_macro, region_macro, thermalOrElectrical, 0); //utilisation of f_function from fem.cpp file.
+if(method == 2) gmm::scale(f_i,-1);//due to sign convention differing in the two methods.
+
 
 //-----------------DEBUT DE LA BOUCLE A PARALLELISER-------------------------------
 
@@ -287,16 +300,16 @@ int elementNumber;
 std::vector<double> temperaturesSlave(3); // Temperatures of the nodes sent to the slave
 std::vector<double> stiffnessMaster(9); // Will contain the 9 elements of the submatrice Ke (sent by process source)
 
-
 if (myrank == 0) // Travail du maître
 {
     int i_while = 0;
 	while(criterionFE2 > criterionFE2_min)
 	{
 		cout << "Running Newton Raphson on the RVEs for macroscopic iteration " << i_while+1 << " ..." << endl;
+
 		gmm::clear(total_stiffness);
 		std::vector<double> f_i(nodes_macro.size());
-		f_function(f_i, nodes_macro, elements_macro, region_macro, THERMALFLAG, 0); //utilisation of f_function from fem.cpp file.
+		f_function(f_i, nodes_macro, elements_macro, region_macro, thermalOrElectrical, 0); //utilisation of f_function from fem.cpp file.
 		if(method == 2) gmm::scale(f_i,-1);
 
 		std::vector <double> q_int(nodes_macro.size());
@@ -386,7 +399,7 @@ if (myrank == 0) // Travail du maître
 		{
 		    if(elements_macro[i]->type == 1)//If line
 		    {
-		        if(region_macro.count(elements_macro[i]->region) == 1 && region_macro[elements_macro[i]->region]->temperature != -1)
+		        if(region_macro.count(elements_macro[i]->region) == 1 && (region_macro[elements_macro[i]->region]->temperature != -1 && thermalOrElectrical == THERMALFLAG || region_macro[elements_macro[i]->region]->voltage != -1 && thermalOrElectrical == ELECTRICFLAG))
 		        {
 		            for(unsigned int j = 0; j < elements_macro[i]->nodes.size(); j++)
 		            {
@@ -404,12 +417,9 @@ if (myrank == 0) // Travail du maître
 		            }
 		        }
 
-
 		    }
 		}
 
-		//cout << "qint" << q_int << endl;
-		//cout << "f_i" << f_i << endl;
 		error.clear();
 		for(unsigned int i=0;i<nodes_macro.size();i++)
 		{
@@ -417,20 +427,42 @@ if (myrank == 0) // Travail du maître
 		}
 
 		
-		for(unsigned int i = 0; i < elements_macro.size(); i++)
+		if(thermalOrElectrical == THERMALFLAG)
 		{
-		    if(elements_macro[i]->type == 1 && region_macro[elements_macro[i]->region]->temperature != -1)//If line
-		    {
-		        if(region_macro.count(elements_macro[i]->region) == 1)//If linesRegion contains elements[i]->region
-		        {
-		            for(unsigned int j = 0; j < elements_macro[i]->nodes.size(); j++)
-		            {
-		                f_i[elements_macro[i]->nodes[j]->num-1] = region_macro[elements_macro[i]->region]->temperature;
-						error[elements_macro[i]->nodes[j]->num-1] = 0.;
-		            }
-		        }
+			for(unsigned int i = 0; i < elements_macro.size(); i++)
+			{
+				if(elements_macro[i]->type == 1 && region_macro[elements_macro[i]->region]->temperature != -1)//If line
+				{
+				    if(region_macro.count(elements_macro[i]->region) == 1)//If linesRegion contains elements[i]->region
+				    {
+				        for(unsigned int j = 0; j < elements_macro[i]->nodes.size(); j++)
+				        {
+				            f_i[elements_macro[i]->nodes[j]->num-1] = region_macro[elements_macro[i]->region]->temperature;
+							error[elements_macro[i]->nodes[j]->num-1] = 0.;
+				        }
+				    }
 
-		    }
+				}
+			}
+		}
+
+		else if(thermalOrElectrical == ELECTRICFLAG)
+		{
+			for(unsigned int i = 0; i < elements_macro.size(); i++)
+			{
+				if(elements_macro[i]->type == 1 && region_macro[elements_macro[i]->region]->voltage != -1)//If line
+				{
+				    if(region_macro.count(elements_macro[i]->region) == 1)//If linesRegion contains elements[i]->region
+				    {
+				        for(unsigned int j = 0; j < elements_macro[i]->nodes.size(); j++)
+				        {
+				            f_i[elements_macro[i]->nodes[j]->num-1] = region_macro[elements_macro[i]->region]->voltage;
+							error[elements_macro[i]->nodes[j]->num-1] = 0.;
+				        }
+				    }
+
+				}
+			}
 		}
 		
 
@@ -443,27 +475,22 @@ if (myrank == 0) // Travail du maître
 		    u_guess[l] = u_guess_vec[0];
 		}
 
-		int flag =1;
-		if(flag)
-		{
-			std::vector<double> flag_temp(nodes_macro.size());
-			gmm::mult(total_stiffness,u_guess,error);
-            gmm::add(flag_temp,f_i,flag_temp);
-			gmm::scale(flag_temp,-1);
-			gmm::add(error,flag_temp,error);
-		}
-
 		if(i_while ==0)
 		{
+			criterionFE2 = 1000;
 		    criterionFE2_0 = gmm::vect_norm2(error);
-			if(criterionFE2_0 < 1e-6) criterionFE2_0 =1; //a etudier
+			//if(criterionFE2_0 < 1e-6) criterionFE2_0 =1; //a etudier
 		}
+
+		criterionFE2_old = criterionFE2;
 		criterionFE2 = gmm::vect_norm2(error);
+
 		if(criterionFE2_0 > criterionFE2_min)
 		{
 			criterionFE2 = criterionFE2/criterionFE2_0;
 		}
-		cout << "FE2 relative residue = " << criterionFE2 << endl << endl; //acorriger
+
+		cout << "FE2 relative residue = " << criterionFE2 << endl << endl;
 
 		if(criterionFE2 > criterionFE2_min)
 		{
@@ -500,27 +527,56 @@ if (myrank == 0) // Travail du maître
 		    solutionFlux_macro[nodes_macro[i]] = val2;
 		}
 
-		//writing the solution.
-		writeMSH((char*)"solutionTemperature.pos", solutionTemperature_macro);
-		writeMSH((char*)"solutionFlux.pos", solutionFlux_macro);
-		
         i_while ++;
 
-		if(criterionFE2 > 0.1 && i_while == 3)
+		//This section takes care of the special cases when the criterion is not converging
+		//-----------------------------------------------------------------------------------------
+
+		if(method == 2 && criterionFE2>criterionFE2_old && criterionFE2 > criterionFE2_min) 
+		{
+			if(i_while == 0) cout << "!!! Error: probably due to non-linearity in the microscopic domain !!!" << endl;
+			else cout << "The method stopped converging but couldn't reach the minimal criterion (" << criterionFE2_min << ")." << endl;
+			while(criterionFE2 > criterionFE2_min) criterionFE2_min = 10*criterionFE2_min;
+			//cout << "!!! The minimal criterion has been rised to " << criterionFE2_min << "!!!" << endl;
+			cout << "Press enter to continue." << endl;
+  			std::cin.ignore();
+		}
+
+		if(method ==1 && criterionFE2 > 0.1 && i_while == 3)//To avoid looping when not converging.
 		{
 			cout << endl;
 			cout << "Anisotropy on the microscopic domain is too important for method 1." << endl;
 			i_while = 0;
-			method = 2;
+			method = 2;//Automatically switches to method 2.
 			cout << "Press enter to use method 2.";
 			cout << endl;
   			std::cin.ignore();
 			int elementFlag = -2;
     		for(unsigned int i=0; i<nbproc;i++)
     		{
-				MPI_Send (&elementFlag, 1, MPI_INT, i, 38, MPI_COMM_WORLD);
+				MPI_Send (&elementFlag, 1, MPI_INT, i, 38, MPI_COMM_WORLD); 
+				//This will tell the subprocesses they have to switch to method 2.
    			}
+			cout << "-----------------------------" << endl;
+		}//end if 
+
+		//writing the solution.
+		if(criterionFE2 < criterionFE2_min)
+		{
+			if(thermalOrElectrical == THERMALFLAG)
+			{
+				writeMSH((char*)"solutionTemperature.pos", solutionTemperature_macro);
+				writeMSH((char*)"solutionFlux.pos", solutionFlux_macro);
+			}
+			else if(thermalOrElectrical == ELECTRICFLAG)
+			{
+				writeMSH((char*)"solutionVoltage.pos", solutionTemperature_macro);
+				writeMSH((char*)"solutionCurrent.pos", solutionFlux_macro);
+			}
 		}
+
+		//-----------------------------------------------------------------------------------------
+
     }//end while
 
 	//flag used to stop the subprocesse from waiting when the FE2 method is over.
@@ -529,16 +585,13 @@ if (myrank == 0) // Travail du maître
     {
 		MPI_Send (&elementFlag, 1, MPI_INT, i, 38, MPI_COMM_WORLD);
     }
-	cout << endl;
-	if(type == FE2withDIRICHLET) cout << "The problem has been solved in two scales with DIRICHLET conditions on the macroscopic domain." << endl;
-	if(type == FE2withVONNEUMANN) cout <<"The problem has been solved in two scales with VONNEUMANN conditions on the macroscopic domain." << endl;
-	if(type == FE2withPERIODIC) cout <<  "The problem has been solved in two scales with PERIODIC conditions on the macroscopic domain."  << endl;
-	cout << endl;
-    //cout << "Press enter to display the solution." << endl;
-	//system("gmsh l.msh solutionTemperature.pos &");
-    //std::cin.ignore();
-	
 
+	cout << "-----------------------------" << endl;
+	if(type == FE2withDIRICHLET) cout << "The problem has been solved in two scales with DIRICHLET conditions." << endl;
+	if(type == FE2withVONNEUMANN) cout <<"The problem has been solved in two scales with VONNEUMANN conditions." << endl;
+	if(type == FE2withPERIODIC) cout <<  "The problem has been solved in two scales with PERIODIC conditions."  << endl;
+	cout << endl;
+	
 }//end master.
 
 if(myrank !=0)
@@ -591,33 +644,32 @@ if(myrank !=0)
         gmm::mult(inverse_J, gradPhi2_red, gradPhi2);
         gmm::mult(inverse_J, gradPhi3_red, gradPhi3);
 
-        u1 = temperaturesSlave[0];
-        u2 = temperaturesSlave[1];
-        u3 = temperaturesSlave[2];
-        
-        T_mean = (1.0/3.0)*(u1 + u2 + u3);
-        
-        conditions_micro.meanTemperature = T_mean;
-        conditions_micro.xGradient = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
-        conditions_micro.yGradient = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
-
-        gradT[0] = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
-        gradT[1] = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
-		    
-		fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps, type);
-
-        q_Me[0] = 0.0;
-        q_Me[1] = 0.0;
-        Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
-
-		// Computation of the q_int_e vector (q_int of the element) :
-		q_int_e[0] = gmm::vect_sp(q_Me, gradPhi1);
-		q_int_e[1] = gmm::vect_sp(q_Me, gradPhi2);
-		q_int_e[2] = gmm::vect_sp(q_Me, gradPhi3);
-        gmm::scale(q_int_e,det_J/2);
-
 		if(method == 1)
 		{
+		    u1 = temperaturesSlave[0];
+		    u2 = temperaturesSlave[1];
+		    u3 = temperaturesSlave[2];
+		    
+		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
+		    
+		    conditions_micro.meanTemperature = T_mean;
+		    conditions_micro.xGradient = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
+		    conditions_micro.yGradient = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
+
+		    gradT[0] = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
+		    gradT[1] = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
+				
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
+
+		    q_Me[0] = 0.0;
+		    q_Me[1] = 0.0;
+		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
+
+			// Computation of the q_int_e vector (q_int of the element) :
+			q_int_e[0] = gmm::vect_sp(q_Me, gradPhi1);
+			q_int_e[1] = gmm::vect_sp(q_Me, gradPhi2);
+			q_int_e[2] = gmm::vect_sp(q_Me, gradPhi3);
+		    gmm::scale(q_int_e,det_J/2);
 		    conductivityTensor(q_Me, gradT, kappa_e);
 		
 			// Computing elementary stiffness matrix
@@ -657,7 +709,7 @@ if(myrank !=0)
 
 		else if(method == 2)
 		{
-			double delta_u = 1e-5;
+			double delta_u = 1e-1;
 
 			std::vector <double> q_int1_plus(3); // Elementary q_int vectors
 			std::vector <double> q_int1_minus(3);
@@ -676,7 +728,7 @@ if(myrank !=0)
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
 
-			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps, type);
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
 
 		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
 
@@ -702,7 +754,7 @@ if(myrank !=0)
 			//cout << "xgrad " << conditions_micro.xGradient << endl;
 			//cout << "ygrad " << conditions_micro.yGradient << endl;
 
-			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps, type);
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
 
 		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
 
@@ -722,7 +774,7 @@ if(myrank !=0)
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
 
-			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps, type);
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
 
 		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
 
@@ -742,7 +794,7 @@ if(myrank !=0)
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
 
-			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps, type);
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
 
 		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
 
@@ -762,7 +814,7 @@ if(myrank !=0)
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
 
-			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps, type);
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
 
 		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
 
@@ -782,7 +834,7 @@ if(myrank !=0)
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
 
-			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, THERMALFLAG, PERIODICFLAG, conditions_micro, eps, type);
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
 
 		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
 
@@ -804,6 +856,29 @@ if(myrank !=0)
 		    element_stiffness(2, 2) = q_int3_plus[2]-q_int3_minus[2];
 
 			gmm::scale(element_stiffness, 1./(2*delta_u));
+
+		    u1 = temperaturesSlave[0];
+		    u2 = temperaturesSlave[1];
+		    u3 = temperaturesSlave[2];
+		    
+		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
+		    
+		    conditions_micro.meanTemperature = T_mean;
+		    conditions_micro.xGradient = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
+		    conditions_micro.yGradient = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
+				
+			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
+
+		    q_Me[0] = 0.0;
+		    q_Me[1] = 0.0;
+		    Average_flux(solutionTemperature_micro, region_micro, elements_micro, q_Me, vol_micro, thermalOrElectrical);
+
+			// Computation of the q_int_e vector (q_int of the element) :
+			q_int_e[0] = gmm::vect_sp(q_Me, gradPhi1);
+			q_int_e[1] = gmm::vect_sp(q_Me, gradPhi2);
+			q_int_e[2] = gmm::vect_sp(q_Me, gradPhi3);
+		    gmm::scale(q_int_e,det_J/2);
+
 		}//end if method ==2
         
     	stiffnessMaster[0] = element_stiffness(0, 0);
