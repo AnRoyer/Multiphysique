@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
 //Il serait utile d'ajouter un paramètre dans le .phy (de type Nature par exemple) afin de pouvoir choisir entre thermique ou électrique.
 //J'ai essayé mais je ne suis pas arriver à trouver comment faire pour lire un paramètre de type Nature.
-
+    int natureFlag = 0;
 
     Type type;
     vector<Parameter*> parameters;
@@ -43,7 +43,54 @@ int main(int argc, char **argv)
 	int methodFE2_micro = 0; //no signification !!
 
     //lecture des PHYs
-    readPHY(argv[2], parameters, conditions, micro, type, eps, methodFE2);
+    readPHY(argv[2], parameters, conditions, micro, type, eps, methodFE2, natureFlag);
+
+    while(1)
+    {
+        int nbrchoix = 1;
+        std::map <int, FemFlag> choix;
+        cout << "What do you want:" << endl;
+
+        if((natureFlag & THERMALDATA) !=0)
+        {
+            cout << nbrchoix << ") \t Thermal computation" << endl;
+            choix[nbrchoix] = THERMALFLAG;
+            nbrchoix++;
+        }
+        if((natureFlag & ELECTRICALDATA) !=0)
+        {
+            cout << nbrchoix << ") \t Electrical computation" << endl;
+            choix[nbrchoix] = ELECTRICFLAG;
+            nbrchoix++;
+        }
+        if((natureFlag & THERMALDATA) !=0 && (natureFlag & ELECTRICALDATA) !=0 )
+        {
+            cout << nbrchoix << ") \t A coupling computation" << endl;
+            nbrchoix++;
+        }
+
+        cout << nbrchoix << ") \t Exit" << endl;
+        nbrchoix ++;
+
+        cout << "? >> ";
+        int userChoix;
+        cin >> userChoix;
+
+        if(userChoix == nbrchoix-1)
+        {
+            return 0;
+        }
+
+        if(userChoix <= 0 || userChoix >= nbrchoix)
+        {
+            cout << "Error : Invalid selection" << endl;
+        }
+        else
+        {
+            thermalOrElectrical = choix[userChoix];
+            break;
+        }
+    }
 
 	if(type == DIRICHLET || type == PERIODIC || type == VONNEUMANN)
 	{
@@ -87,7 +134,8 @@ int main(int argc, char **argv)
 
     if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
     {
-        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, type_micro, eps_micro, methodFE2_micro);
+        int poubelle;
+        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, type_micro, eps_micro, methodFE2_micro, poubelle);
     }
 
     vector<Node*> nodes;

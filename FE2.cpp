@@ -22,7 +22,7 @@ void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro,
          std::vector<Parameter*> &parameters_micro, std::map<Node*, std::vector<double> > &solutionTemperature_micro,
          std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro,
          std::vector<Element*> &elements_macro, std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro,
-         std::map<Node*, std::vector<double> > &solutionTemperature_macro, std::map<Node*, std::vector<double> > &solutionFlux_macro, 
+         std::map<Node*, std::vector<double> > &solutionTemperature_macro, std::map<Node*, std::vector<double> > &solutionFlux_macro,
 		 double eps, int argc, char ** argv, int &methodFE2, FemFlag thermalOrElectrical, Type type)
 {
 
@@ -186,9 +186,9 @@ if(myrank == 0)
 
 //Error and criterion for the FE2 method.
 std::vector<double> error(nodes_macro.size());
-double criterionFE2 = 1; 
+double criterionFE2 = 1;
 double criterionFE2_0 =0;
-double criterionFE2_old = 0; 
+double criterionFE2_old = 0;
 double criterionFE2_min = 1e-6; //Is initiated to 1e-6 but will automatically grow if method 2 is not converging.
 
 double u1, u2, u3; // Nodal temperatures of an element.
@@ -198,11 +198,11 @@ std::vector<double> q_Me(2);   // Mean flux over an element.
 gmm::dense_matrix<double> kappa_e(2,2);// Conductivity of an element.
 gmm::dense_matrix<double> element_stiffness(3, 3); // Stiffness matrix of an element.
 std::vector <double> q_int_e(3); // Elementary q_int vector
-	
+
 gmm::dense_matrix<double> J(2, 2); // Jacobian matrix
 gmm::dense_matrix<double> inverse_J(2, 2); // Its inverse
 double det_J; // Its determinant
-	
+
 std::vector<double> gradPhi1_red(2);
 std::vector<double> gradPhi2_red(2);
 std::vector<double> gradPhi3_red(2);
@@ -320,7 +320,7 @@ if (myrank == 0) // Travail du maître
         {
             if(elements_macro[k]->type == 2)
                 break;
-        } 
+        }
 		for (p = 1; p <= nbproc-1; p++)
 		{
 	        numToSend = p-1+k; // Process 1 will be busy with finite element 0,...
@@ -337,11 +337,11 @@ if (myrank == 0) // Travail du maître
 			MPI_Send (&temperaturesSlave[0], 3, MPI_DOUBLE, p, 42, MPI_COMM_WORLD);
 		}
 		// End of initialization
-		
+
 		/* Now the master loops over the remainder of the finite elements. When the slave process number source sends back a Ke matrix,
 		master process asks it to work now with finite element i and put the submatrix in K.
 		*/
-		
+
 		for (int i = nbproc - 1+k; i < nbElem + nbproc-1; i++)
 		{
 			//cout << "i " << i << endl;
@@ -368,10 +368,10 @@ if (myrank == 0) // Travail du maître
 	        total_stiffness(numNodesMaster[2], numNodesMaster[0]) = total_stiffness(numNodesMaster[2], numNodesMaster[0]) + stiffnessMaster [6];
 	        total_stiffness(numNodesMaster[2], numNodesMaster[1]) = total_stiffness(numNodesMaster[2], numNodesMaster[1]) + stiffnessMaster [7];
 	        total_stiffness(numNodesMaster[2], numNodesMaster[2]) = total_stiffness(numNodesMaster[2], numNodesMaster[2]) + stiffnessMaster [8];
-			
+
 			MPI_Recv (&q_int_e[0], 3, MPI_DOUBLE, source, 41, MPI_COMM_WORLD, & status);
 
-			// Assemling q_int : 
+			// Assemling q_int :
 			q_int[numNodesMaster[0]] = q_int[numNodesMaster[0]] + q_int_e[0];
 			q_int[numNodesMaster[1]] = q_int[numNodesMaster[1]] + q_int_e[1];
 			q_int[numNodesMaster[2]] = q_int[numNodesMaster[2]] + q_int_e[2];
@@ -380,7 +380,7 @@ if (myrank == 0) // Travail du maître
 			{
 				// On demande maintenant au process source de se charger de l'élément i
 				numToSend = i; // Same procedure than for the initializatino but with element number i
-				    
+
 				// Temperatures at these nodes
 				sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[0]];
 				temperaturesSlave[0] = sol_u_tmp[0];
@@ -388,11 +388,11 @@ if (myrank == 0) // Travail du maître
 				temperaturesSlave[1] = sol_u_tmp[0];
 				sol_u_tmp = solutionTemperature_macro[elements_macro[numToSend] -> nodes[2]];
 				temperaturesSlave[2] = sol_u_tmp[0];
-				    
+
 				MPI_Send (&numToSend, 1, MPI_INT, source, 38, MPI_COMM_WORLD);
 				MPI_Send (&temperaturesSlave[0], 3, MPI_DOUBLE, source, 42, MPI_COMM_WORLD);
 			}
-	
+
 		}
 
 		for(unsigned int i = 0; i < elements_macro.size(); i++)
@@ -426,7 +426,7 @@ if (myrank == 0) // Travail du maître
 			error.push_back(q_int[i] - f_i[i]);
 		}
 
-		
+
 		if(thermalOrElectrical == THERMALFLAG)
 		{
 			for(unsigned int i = 0; i < elements_macro.size(); i++)
@@ -464,7 +464,7 @@ if (myrank == 0) // Travail du maître
 				}
 			}
 		}
-		
+
 
 		std::vector<double> u_guess_vec(1);
 		std::vector<double> u_guess(nodes_macro.size());
@@ -516,7 +516,7 @@ if (myrank == 0) // Travail du maître
 		std::vector<double> q_m_y(nodes_macro.size());
 		std::vector<double> qint(nodes_macro.size());
 
-		Internal_flux(u_guess, region_macro, elements_macro, qint, q_m_x, q_m_y);//Chargement de la solution pour la solution du flux
+		Internal_flux(u_guess, region_macro, elements_macro, qint, q_m_x, q_m_y, thermalOrElectrical);//Chargement de la solution pour la solution du flux
 
 		for(unsigned int i = 0; i < nodes_macro.size(); i++)
 		{
@@ -532,7 +532,7 @@ if (myrank == 0) // Travail du maître
 		//This section takes care of the special cases when the criterion is not converging
 		//-----------------------------------------------------------------------------------------
 
-		if(method == 2 && criterionFE2>criterionFE2_old && criterionFE2 > criterionFE2_min) 
+		if(method == 2 && criterionFE2>criterionFE2_old && criterionFE2 > criterionFE2_min)
 		{
 			if(i_while == 0) cout << "!!! Error: probably due to non-linearity in the microscopic domain !!!" << endl;
 			else cout << "The method stopped converging but couldn't reach the minimal criterion (" << criterionFE2_min << ")." << endl;
@@ -554,11 +554,11 @@ if (myrank == 0) // Travail du maître
 			int elementFlag = -2;
     		for(unsigned int i=0; i<nbproc;i++)
     		{
-				MPI_Send (&elementFlag, 1, MPI_INT, i, 38, MPI_COMM_WORLD); 
+				MPI_Send (&elementFlag, 1, MPI_INT, i, 38, MPI_COMM_WORLD);
 				//This will tell the subprocesses they have to switch to method 2.
    			}
 			cout << "-----------------------------" << endl;
-		}//end if 
+		}//end if
 
 		//writing the solution.
 		if(criterionFE2 < criterionFE2_min)
@@ -591,7 +591,7 @@ if (myrank == 0) // Travail du maître
 	if(type == FE2withVONNEUMANN) cout <<"The problem has been solved in two scales with VONNEUMANN conditions." << endl;
 	if(type == FE2withPERIODIC) cout <<  "The problem has been solved in two scales with PERIODIC conditions."  << endl;
 	cout << endl;
-	
+
 }//end master.
 
 if(myrank !=0)
@@ -606,12 +606,12 @@ if(myrank !=0)
 			MPI_Recv (&numElem, 1, MPI_INT, 0, 38, MPI_COMM_WORLD, & status);
 		}
 		MPI_Recv (&temperaturesSlave[0], 3, MPI_DOUBLE, 0, 42, MPI_COMM_WORLD, & status);
-	
+
 		// On récupère les noeuds relatifs à l'élément envoyé
 		Node *n1 = elements_macro[numElem]->nodes[0];
         Node *n2 = elements_macro[numElem]->nodes[1];
         Node *n3 = elements_macro[numElem]->nodes[2];
-	
+
 		// Leurs coordonnées
         double x1 = n1->x;
         double y1 = n1->y;
@@ -631,9 +631,9 @@ if(myrank !=0)
         J (1, 0) = x3 - x1;
         J (1, 1) = y3 - y1;
 
-        // Determinant of the Jacobian 
+        // Determinant of the Jacobian
         det_J = (x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
-        
+
         //Inverse of the Jacobian Matrix
         inverse_J(0,0) = 1.0/det_J*(y3-y1);
         inverse_J(0,1) = 1.0/det_J*(y1-y2);
@@ -649,16 +649,16 @@ if(myrank !=0)
 		    u1 = temperaturesSlave[0];
 		    u2 = temperaturesSlave[1];
 		    u3 = temperaturesSlave[2];
-		    
+
 		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
-		    
+
 		    conditions_micro.meanTemperature = T_mean;
 		    conditions_micro.xGradient = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
 
 		    gradT[0] = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
 		    gradT[1] = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
-				
+
 			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
 
 		    q_Me[0] = 0.0;
@@ -671,7 +671,7 @@ if(myrank !=0)
 			q_int_e[2] = gmm::vect_sp(q_Me, gradPhi3);
 		    gmm::scale(q_int_e,det_J/2);
 		    conductivityTensor(q_Me, gradT, kappa_e);
-		
+
 			// Computing elementary stiffness matrix
 		    gmm::mult(kappa_e, inverse_J, a0);
 
@@ -703,7 +703,7 @@ if(myrank !=0)
 		    element_stiffness(2, 1) = element_stiffness_temp;
 		    element_stiffness_temp = gmm::vect_sp(a3, b3);
 		    element_stiffness(2, 2) = element_stiffness_temp;
-		    
+
 		    gmm::scale(element_stiffness, 0.5*det_J);
 		}// end if method ==1
 
@@ -721,9 +721,9 @@ if(myrank !=0)
 		    u1 = temperaturesSlave[0]+delta_u;
 		    u2 = temperaturesSlave[1];
 		    u3 = temperaturesSlave[2];
-		    
+
 		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
-		    
+
 		    conditions_micro.meanTemperature = T_mean;
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
@@ -741,13 +741,13 @@ if(myrank !=0)
 		    u1 = temperaturesSlave[0]-delta_u;
 		    u2 = temperaturesSlave[1];
 		    u3 = temperaturesSlave[2];
-		    
+
 			//cout <<  "t1 " << u1 << endl;
 			//cout <<  "t2 " << u2 << endl;
 			//cout <<  "t3 " << u3 << endl;
 		    //T_mean = (1.0/3.0)*(u1 + u2 + u3);
 			//cout << "Tmean " << T_mean << endl;
-		    
+
 		    conditions_micro.meanTemperature = T_mean;
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
@@ -767,9 +767,9 @@ if(myrank !=0)
 		    u1 = temperaturesSlave[0];
 		    u2 = temperaturesSlave[1]+delta_u;
 		    u3 = temperaturesSlave[2];
-		    
+
 		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
-		    
+
 		    conditions_micro.meanTemperature = T_mean;
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
@@ -787,9 +787,9 @@ if(myrank !=0)
 		    u1 = temperaturesSlave[0];
 		    u2 = temperaturesSlave[1]-delta_u;
 		    u3 = temperaturesSlave[2];
-		    
+
 		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
-		    
+
 		    conditions_micro.meanTemperature = T_mean;
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
@@ -807,9 +807,9 @@ if(myrank !=0)
 		    u1 = temperaturesSlave[0];
 		    u2 = temperaturesSlave[1];
 		    u3 = temperaturesSlave[2]+delta_u;
-		    
+
 		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
-		    
+
 		    conditions_micro.meanTemperature = T_mean;
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
@@ -827,9 +827,9 @@ if(myrank !=0)
 		    u1 = temperaturesSlave[0];
 		    u2 = temperaturesSlave[1];
 		    u3 = temperaturesSlave[2]-delta_u;
-		    
+
 		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
-		    
+
 		    conditions_micro.meanTemperature = T_mean;
 		    conditions_micro.xGradient = u1*gradPhi1[0] + u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] + u2*gradPhi2[1] + u3*gradPhi3[1];
@@ -860,13 +860,13 @@ if(myrank !=0)
 		    u1 = temperaturesSlave[0];
 		    u2 = temperaturesSlave[1];
 		    u3 = temperaturesSlave[2];
-		    
+
 		    T_mean = (1.0/3.0)*(u1 + u2 + u3);
-		    
+
 		    conditions_micro.meanTemperature = T_mean;
 		    conditions_micro.xGradient = u1*gradPhi1[0] +  u2*gradPhi2[0] + u3*gradPhi3[0];
 		    conditions_micro.yGradient = u1*gradPhi1[1] +  u2*gradPhi2[1] + u3*gradPhi3[1];
-				
+
 			fem(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro, thermalOrElectrical, PERIODICFLAG, conditions_micro, eps, type);
 
 		    q_Me[0] = 0.0;
@@ -880,7 +880,7 @@ if(myrank !=0)
 		    gmm::scale(q_int_e,det_J/2);
 
 		}//end if method ==2
-        
+
     	stiffnessMaster[0] = element_stiffness(0, 0);
     	stiffnessMaster[1] = element_stiffness(0, 1);
     	stiffnessMaster[2] = element_stiffness(0, 2);

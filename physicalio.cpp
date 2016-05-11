@@ -11,7 +11,8 @@ using namespace std;
 
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type &typeUsed, double &eps, int &methodFE2)
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro,
+             Type &typeUsed, double &eps, int &methodFE2, int &natureFlag)
 {
     ifstream fp(fileName);
     if(!fp.is_open())//On verifie que le fichier soit bien ouvert
@@ -223,10 +224,12 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                 else if(word == "thermal")
                 {
                     currentNature = THERMAL;
+                    natureFlag = (natureFlag|THERMALDATA);
                 }
                 else if(word == "electrical")
                 {
                     currentNature = ELECTRICAL;
+                    natureFlag = (natureFlag|ELECTRICALDATA);
                 }
                 else if(word == "value")
                 {
@@ -328,7 +331,18 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                             newCond->conductivity[1][0] = readValue(fp);
                             newCond->conductivity[1][1] = readValue(fp);
 
-                            p->thermalConductivity.push_back(newCond);
+                            if(currentNature == THERMAL)
+                            {
+                                p->thermalConductivity.push_back(newCond);
+                            }
+                            else if(currentNature == ELECTRICAL)
+                            {
+                                p->electricalConductivity.push_back(newCond);
+                            }
+                            else
+                            {
+                               cout << "Error: unknown current nature" << endl;
+                            }
                         }
                         else if(typeValue == 2)
                         {
@@ -351,7 +365,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                     }
                     else if(currentNature == ELECTRICAL)
                     {
-                        conditions.meanTemperature = readValue(fp);
+                        conditions.meanVoltage = readValue(fp);
                     }
                     else
                     {
