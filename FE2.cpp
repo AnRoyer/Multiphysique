@@ -522,7 +522,7 @@ if (myrank == 0) // Travail du maître
    			}
 		}
     }//end while
-    
+
 	//flag used to stop the subprocesse from waiting when the FE2 method is over.
 	int elementFlag = -1;
     for(unsigned int i=0; i<nbproc;i++)
@@ -538,6 +538,17 @@ if (myrank == 0) // Travail du maître
 	//system("gmsh l.msh solutionTemperature.pos &");
     //std::cin.ignore();
 	
+    //Write in .dat file
+    FILE *fp = fopen("dataMatlabT.dat", "w");
+
+    std::map<Node*, std::vector<double> >::iterator itT = solutionTemperature.begin();
+
+    for(itT = solutionTemperature_macro.begin(); itT != solutionTemperature.end(); itT++)
+    {
+    fprintf(fp, "%.15f \t %.15f \t %.15f \n", itT->first->x, itT->first->y, itT->second[0]);
+    }
+
+    fclose(fp);
 
 }//end master.
 
