@@ -282,26 +282,23 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
     double cons;
     for(unsigned int i = 0; i < elements.size(); i++)
     {
-        if(constantProperty != 0)
-        {
-            cons = constantProperty;
-        }
-        else
-        {
-            if(thermalOrElectrical == THERMALFLAG)
-            {
-                cons = region[elements[i]->region]->thermalGeneration;
-            }
-            else if(thermalOrElectrical == ELECTRICFLAG)
-            {
-                cons = region[elements[i]->region]->electricalGeneration;
-            }
-        }
-
-
         if(elements[i]->type == 2)//If triangle
         {
-
+            if(constantProperty != 0)
+            {
+                cons = constantProperty;
+            }
+            else
+            {
+                if(thermalOrElectrical == THERMALFLAG)
+                {
+                    cons = region[elements[i]->region]->thermalGeneration;
+                }
+                else if(thermalOrElectrical == ELECTRICFLAG)
+                {
+                    cons = region[elements[i]->region]->electricalGeneration;
+                }
+            }
 
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];
@@ -320,6 +317,22 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
         }
         else if(elements[i]->type == 3)//If quad
         {
+            if(constantProperty != 0)
+            {
+                cons = constantProperty;
+            }
+            else
+            {
+                if(thermalOrElectrical == THERMALFLAG)
+                {
+                    cons = region[elements[i]->region]->thermalGeneration;
+                }
+                else if(thermalOrElectrical == ELECTRICFLAG)
+                {
+                    cons = region[elements[i]->region]->electricalGeneration;
+                }
+            }
+
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];
             Node *n3 = elements[i]->nodes[2];

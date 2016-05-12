@@ -29,7 +29,7 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
     std::vector<double> q_m_x(0); //Internal flux vector
     std::vector<double> q_m_y(0); //Internal flux vector
 
-	Internal_flux(theta_k, region, elements, qint, q_m_x, q_m_y, thermalOrElectrical);
+    Internal_flux(theta_k, region, elements, qint, q_m_x, q_m_y, thermalOrElectrical);
 
     //TANGENT STIFFNESS MATRIX :  KT
     Tangent_Stiffness_Matrix(theta_k, region, elements, KT_tmp, NodesCorresp, nodes, thermalOrElectrical);
