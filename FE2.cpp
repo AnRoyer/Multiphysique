@@ -22,7 +22,11 @@ void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro,
          std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro,
          std::vector<Element*> &elements_macro, std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro,
          std::map<Node*, std::vector<double> > &solutionTemperature_macro, std::map<Node*, std::vector<double> > &solutionFlux_macro,
+<<<<<<< HEAD
 		 double eps, int &methodFE2, FemFlag thermalOrElectrical, Type type, int argc, char **argv, int &natureFlag)
+=======
+		 double eps, int argc, char ** argv, int &methodFE2, FemFlag thermalOrElectrical, Type type)
+>>>>>>> 27f2856faeee2a5886667370760beae328e14362
 {
 
 // MPI initialization
@@ -261,7 +265,11 @@ std::vector<double> gradT(2);// Mean gradient over an element.
 std::vector<double> q_Me(2);   // Mean flux over an element.
 gmm::dense_matrix<double> kappa_e(2,2);// Conductivity of an element.
 gmm::dense_matrix<double> element_stiffness(3, 3); // Stiffness matrix of an element.
+<<<<<<< HEAD
 std::vector<double> q_int_e(3); // Elementary q_int vector
+=======
+std::vector <double> q_int_e(3); // Elementary q_int vector
+>>>>>>> 27f2856faeee2a5886667370760beae328e14362
 
 gmm::dense_matrix<double> J(2, 2); // Jacobian matrix
 gmm::dense_matrix<double> inverse_J(2, 2); // Its inverse
@@ -435,6 +443,7 @@ if (myrank == 0) // Travail du maître
 
 			//Assemling q_int :
 			MPI_Recv (&q_int_e[0], 3, MPI_DOUBLE, source, 35, MPI_COMM_WORLD, & status);
+
 			q_int[numNodesMaster[0]] = q_int[numNodesMaster[0]] + q_int_e[0];
 			q_int[numNodesMaster[1]] = q_int[numNodesMaster[1]] + q_int_e[1];
 			q_int[numNodesMaster[2]] = q_int[numNodesMaster[2]] + q_int_e[2];
