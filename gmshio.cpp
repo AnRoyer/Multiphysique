@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include "gmshio.h"
+#include <mpi.h>
 
 //code vu en cours
 void readMSH(const char *fileName, std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals)
