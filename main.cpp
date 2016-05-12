@@ -207,6 +207,20 @@ int main(int argc, char **argv)
 	{
 		writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
 		writeMSH((char*)"solutionFlux.pos", solutionFlux);
+
+		//Write in .dat file
+		FILE *fp = fopen("dataMatlabT.dat", "w");
+
+		std::map<Node*, std::vector<double> >::iterator itT = solutionTemperature.begin();
+
+		for(itT = solutionTemperature_macro.begin(); itT != solutionTemperature.end(); itT++)
+		{
+		fprintf(fp, "%.15f \t %.15f \t %.15f \n", itT->first->x, itT->first->y, itT->second[0]);
+		}
+
+		fclose(fp);
+
+
 		cout << endl;
 		if(type == DIRICHLET) cout << "The problem has been solved in one scale using DIRICHLET conditions." << endl;
 		if(type == VONNEUMANN) cout << "The problem has been solved in one scale using VONNEUMANN conditions." << endl;

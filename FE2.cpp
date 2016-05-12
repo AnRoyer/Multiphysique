@@ -522,7 +522,7 @@ if (myrank == 0) // Travail du maître
    			}
 		}
     }//end while
-
+    
 	//flag used to stop the subprocesse from waiting when the FE2 method is over.
 	int elementFlag = -1;
     for(unsigned int i=0; i<nbproc;i++)
