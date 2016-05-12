@@ -1,8 +1,8 @@
-<phy type="dirichlet">
+<phy type="dirichlet" res="1e-6">
 	<global>
 		<thermal>
 			<mean>
-			$200$
+				$200$
 			</mean>
 			<xgradient>
 				$100$
@@ -14,28 +14,28 @@
 	</global>
 	<line name="left">
 		<thermal>
-			<value>
+			<value type="reference">
 				$100$
 			</value>
 		</thermal>
 	</line>
 	<line name="right">
 		<thermal>
-			<value>
+			<value type="reference">
 				$1000$
 			</value>
 		</thermal>
 	</line>
 	<line name="top">
 		<thermal>
-			<value>
+			<value type="reference">
 				$NULL$
 			</value>
 		</thermal>
 	</line>
 	<line name="bottom">
 		<thermal>
-			<value>
+			<value type="reference">
 				$NULL$
 			</value>
 		</thermal>
