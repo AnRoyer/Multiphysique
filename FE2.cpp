@@ -541,9 +541,9 @@ if (myrank == 0) // Travail du maître
     //Write in .dat file
     FILE *fp = fopen("dataMatlabT.dat", "w");
 
-    std::map<Node*, std::vector<double> >::iterator itT = solutionTemperature.begin();
+    std::map<Node*, std::vector<double> >::iterator itT = solutionTemperature_macro.begin();
 
-    for(itT = solutionTemperature_macro.begin(); itT != solutionTemperature.end(); itT++)
+    for(itT = solutionTemperature_macro.begin(); itT != solutionTemperature_macro.end(); itT++)
     {
     fprintf(fp, "%.15f \t %.15f \t %.15f \n", itT->first->x, itT->first->y, itT->second[0]);
     }
