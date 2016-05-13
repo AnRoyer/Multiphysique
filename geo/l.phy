@@ -1,0 +1,51 @@
+<phy type="fe2D" res="1e-4" microMSH="micro.msh" microPHY="micro.phy" methodFE2="1">
+	<global>
+		<thermal>
+			<mean>
+			$200$
+			</mean>
+			<xgradient>
+				$100$
+			</xgradient>
+			<ygradient>
+				$0$
+			</ygradient>
+		</thermal>
+	</global>
+	<line name="t1">
+		<thermal>
+			<value type="reference">
+				$100$
+			</value>
+		</thermal>
+	</line>
+	<line name="t2">
+		<thermal>
+			<value type="reference">
+				$1000$
+			</value>
+		</thermal>
+	</line>
+	<line name="border">
+		<thermal>
+			<value type="reference">
+				$NULL$
+			</value>
+		</thermal>
+	</line>
+	<surface name="plane">
+		<thermal>
+			<value type="conductivity" name="alpha">
+				$0$	$0$
+				$0$	$0$
+			</value>
+			<value type="conductivity" name="beta">
+				$100$	$0$
+				$0$	$100$
+			</value>
+			<value type="generation">
+				$0$
+			</value>
+		</thermal>
+	</surface>
+</phy>
