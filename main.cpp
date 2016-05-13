@@ -43,14 +43,14 @@ int main(int argc, char **argv)
     Periodique conditions;
     Micro micro;
     double eps = 0;
-	int methodFE2 = 0;
+	std::vector<int> methodFE2(2);
 
     Type type_micro;
     vector<Parameter*> parameters_micro;
     Periodique conditions_micro;
     Micro micro_micro;
     double eps_micro = 0;
-	int methodFE2_micro = 0; //no signification !!
+	std::vector<int> methodFE2_micro(2); //no signification !!
 
     //lecture des PHYs
     readPHY(argv[2], parameters, conditions, micro, type, eps, methodFE2, natureFlag);
@@ -185,13 +185,14 @@ int main(int argc, char **argv)
 	{
     //Affichage des infos principales
 		cout << endl;
-		if(thermalOrElectrical == THERMALFLAG) cout << "SOLVING A THERMAL PROBLEM." << endl << endl;
-		if(thermalOrElectrical == ELECTRICFLAG) cout << "SOLVING AN ELECTRICAL PROBLEM." << endl << endl;
-		cout << "Read " << nodes.size() << " nodes and " << elements.size() << " elements." << endl << endl;
+		if(thermalOrElectrical == THERMALFLAG) cout << "SOLVING A THERMIC PROBLEM." << endl << endl;
+		if(thermalOrElectrical == ELECTRICFLAG) cout << "SOLVING AN ELECTRIC PROBLEM." << endl << endl;
+		//cout << "Read " << nodes.size() << " nodes and " << elements.size() << " elements." << endl << endl;
 		if(type == DIRICHLET) cout << "Calling the FE1 method with DIRICHLET conditions." << endl;
 		if(type == VONNEUMANN) cout << "Calling the FE1 method with VONNEUMANN conditions." << endl;
 		if(type == PERIODIC) cout << "Calling the FE1 method with PERIODIC conditions." << endl;
 		cout << endl;
+		cout << "-----------------------------" << endl;
 	}
 
 	map<Node*, vector<double> > solutionTemperature;
@@ -334,9 +335,19 @@ int main(int argc, char **argv)
 			writeMSH((char*)"solutionCurrent.pos", solutionCurrent);
 		}
 		cout << endl;
-		if(type == DIRICHLET) cout << "The problem has been solved in one scale using DIRICHLET conditions." << endl;
-		if(type == VONNEUMANN) cout << "The problem has been solved in one scale using VONNEUMANN conditions." << endl;
-		if(type == PERIODIC) cout << "The problem has been solved in one scale using PERIODIC conditions." << endl;
+		cout << "-----------------------------" << endl;
+		if(type == DIRICHLET && thermalOrElectrical == THERMALFLAG) 
+		cout << "The THERMIC problem has been solved in ONE SCALE with DIRICHLET conditions." << endl;
+		if(type == VONNEUMANN && thermalOrElectrical == THERMALFLAG) 
+		cout <<"The THERMIC problem has been solved in ONE SCALE with VON NEUMANN conditions." << endl;
+		if(type == PERIODIC && thermalOrElectrical == THERMALFLAG) 
+		cout <<  "The THERMIC problem has been solved in ONE SCALE with PERIODIC conditions."  << endl;
+		if(type == DIRICHLET && thermalOrElectrical == ELECTRICFLAG) 
+		cout << "The ELECTRIC problem has been solved in ONE SCALE with DIRICHLET conditions." << endl;
+		if(type == VONNEUMANN && thermalOrElectrical == ELECTRICFLAG) 
+		cout <<"The ELECTRIC problem has been solved in ONE SCALE with VON NEUMANN conditions." << endl;
+		if(type == PERIODIC && thermalOrElectrical == ELECTRICFLAG) 
+		cout <<  "The ELECTRIC problem has been solved in ONE SCALE with PERIODIC conditions."  << endl;
 		cout << endl;
 		/*cout << "Press Enter to show the solution." << endl;
 		std::cin.ignore();

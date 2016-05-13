@@ -13,7 +13,7 @@ using namespace std;
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
 void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro,
-             Type &typeUsed, double &eps, int &methodFE2, int &natureFlag)
+             Type &typeUsed, double &eps, std::vector<int> &methodFE2, int &natureFlag)
 {
     ifstream fp(fileName);
     if(!fp.is_open())//On verifie que le fichier soit bien ouvert
@@ -30,7 +30,9 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
     Nature currentNature = DEFAULTNATURE;
     Dim currentDim = DEFAULTDIM;
     double epsRead = 0;
-	int methodFE2Read;
+	int methodFE2Read_thermic;
+	int methodFE2Read_electric;
+	int flagFE2 = 0;
 
     while(true)
     {
@@ -105,7 +107,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                                 type = VONNEUMANN;
                                 conditions.exist = false;
                             }
-                            else if(param.value == "fe2D")
+                            /*else if(param.value == "fe2D")
                             {
                                 //cout << "Reading a FE2 with dirichlet phy file ..." << endl;
                                 type = FE2withDIRICHLET;
@@ -122,10 +124,19 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                                 //cout << "Reading a FE2 with periodic phy file ..." << endl;
                                 type = FE2withPERIODIC;
                                 conditions.exist = true;
-                            }
+                            }*/
                             else
                             {
-                                //cout << "Error: unknown type" << endl;
+                                cout << "Error: unknown type" << endl;
+                            }
+						}
+                        else if(param.name == "FE2")
+                        {
+                            if(param.value == "on") flagFE2 = 1;
+                            else if(param.value == "off") flagFE2 = 0;
+                            else
+                            {
+                                cout << "Error: unknown FE2 flag." << endl;
                             }
                         }
                         else if(param.name == "microMSH")
@@ -140,9 +151,13 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         {
                             sscanf(param.value.c_str(), "%lf", &epsRead);
                         }
-                        else if(param.name == "methodFE2")
+                        else if(param.name == "methodFE2_thermic")
                         {
-                            sscanf(param.value.c_str(), "%d", &methodFE2Read);
+                            sscanf(param.value.c_str(), "%d", &methodFE2Read_thermic);
+                        }
+                        else if(param.name == "methodFE2_electric")
+                        {
+                            sscanf(param.value.c_str(), "%d", &methodFE2Read_electric);
                         }
                         /*else if(param.name == "nature")
                         {
@@ -407,7 +422,10 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
         }
     }
 
-    typeUsed = type;
+	if(flagFE2 == 0) typeUsed = type;
+	else if(type == DIRICHLET && flagFE2 == 1) typeUsed = FE2withDIRICHLET;
+	else if(type == VONNEUMANN && flagFE2 == 1) typeUsed = FE2withVONNEUMANN;
+	else if(type == PERIODIC && flagFE2 == 1) typeUsed = FE2withPERIODIC;
 
     if(epsRead == 0)
     {
@@ -418,13 +436,22 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
         eps = epsRead;
     }
 
-    if(methodFE2Read == 0)
+    if(methodFE2Read_thermic == 0)
     {
-        methodFE2 = 2;
+        methodFE2[0] = 2;
     }
     else
     {
-        methodFE2 = methodFE2Read;
+        methodFE2[0] = methodFE2Read_thermic;
+    }
+
+    if(methodFE2Read_electric == 0)
+    {
+        methodFE2[1] = 2;
+    }
+    else
+    {
+        methodFE2[1] = methodFE2Read_electric;
     }
 
     //cout << "End of the file reaches" << endl;

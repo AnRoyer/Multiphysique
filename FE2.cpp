@@ -22,11 +22,7 @@ void FE2(std::vector<Node*> &nodes_micro, std::vector<Element*> &elements_micro,
          std::map<Node*, std::vector<double> > &solutionFlux_micro, Periodique &conditions_micro, std::vector<Node*> &nodes_macro,
          std::vector<Element*> &elements_macro, std::vector<Physical*> &physicals_macro,std::vector<Parameter*> &parameters_macro,
          std::map<Node*, std::vector<double> > &solutionTemperature_macro, std::map<Node*, std::vector<double> > &solutionFlux_macro,
-<<<<<<< HEAD
-		 double eps, int &methodFE2, FemFlag thermalOrElectrical, Type type, int argc, char **argv, int &natureFlag)
-=======
-		 double eps, int argc, char ** argv, int &methodFE2, FemFlag thermalOrElectrical, Type type)
->>>>>>> 27f2856faeee2a5886667370760beae328e14362
+		 double eps, std::vector<int> &methodFE2, FemFlag thermalOrElectrical, Type type, int argc, char **argv, int &natureFlag)
 {
 
 // MPI initialization
@@ -241,7 +237,9 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 
 
 //Flag defining which FE2 method will be used.
-int method = methodFE2;
+int method;
+if(thermalOrElectrical == THERMALFLAG) method = methodFE2[0];
+else if(thermalOrElectrical == ELECTRICFLAG) method = methodFE2[1];
 
 if(myrank == 0)
 {
@@ -265,11 +263,7 @@ std::vector<double> gradT(2);// Mean gradient over an element.
 std::vector<double> q_Me(2);   // Mean flux over an element.
 gmm::dense_matrix<double> kappa_e(2,2);// Conductivity of an element.
 gmm::dense_matrix<double> element_stiffness(3, 3); // Stiffness matrix of an element.
-<<<<<<< HEAD
 std::vector<double> q_int_e(3); // Elementary q_int vector
-=======
-std::vector <double> q_int_e(3); // Elementary q_int vector
->>>>>>> 27f2856faeee2a5886667370760beae328e14362
 
 gmm::dense_matrix<double> J(2, 2); // Jacobian matrix
 gmm::dense_matrix<double> inverse_J(2, 2); // Its inverse
