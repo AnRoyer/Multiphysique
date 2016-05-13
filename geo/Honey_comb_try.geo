@@ -87,6 +87,6 @@ Plane Surface(46) = {45};
 // Définition des Physical group : 
 
 Physical Line(43) = {19, 29, 30, 20, 21, 22, 23, 24, 25, 26, 27, 28};// Contour
-Physical Surface(44) = {32, 34, 40, 38, 36}; // Cellule résistance
-Physical Surface(47) = {46}; // Cellule conductrice
+Physical Surface("Resist") = {32, 34, 40, 38, 36}; // Cellule résistance
+Physical Surface("Conductive") = {46}; // Cellule conductrice
 Transfinite Line {29, 30, 20, 19, 28, 27, 26, 25, 24, 25, 25, 23, 22, 21} = 21 Using Progression 1;
