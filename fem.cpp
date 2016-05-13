@@ -1,4 +1,4 @@
-	#include <iostream>
+#include <iostream>
 #include <cstdio>
 #include <vector>
 #include <map>
@@ -6,6 +6,7 @@
 #include "gmm/gmm.h"
 #include "fem.h"
 #include "NewtonRaphson.h"
+#include <mpi.h>
 
 using namespace std;
 
@@ -13,7 +14,7 @@ using namespace std;
 
 
 void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector<Physical*> &physicals, std::vector<Parameter*> &parameters,
-         std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux, 
+         std::map<Node*, std::vector<double> > &solutionTemperature, std::map<Node*, std::vector<double> > &solutionFlux,
 		 FemFlag thermalOrElectrical,
          FemFlag method, Periodique &conditions, double eps, Type type)
 {
@@ -151,26 +152,53 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
             {
                 if(region.count(elements[l]->region) == 1)
                 {
-                    if(region[elements[l]->region]->fluxTemperature != -1)
+                    if(thermalOrElectrical == THERMALFLAG)
                     {
-                        Node *n1 = elements[l]->nodes[0];
-                        Node *n2 = elements[l]->nodes[1];
+                        if(region[elements[l]->region]->fluxTemperature != -1)
+                        {
+                            Node *n1 = elements[l]->nodes[0];
+                            Node *n2 = elements[l]->nodes[1];
 
-                        double x1 = n1->x;
-                        double y1 = n1->y;
-                        double x2 = n2->x;
-                        double y2 = n2->y;
+                            double x1 = n1->x;
+                            double y1 = n1->y;
+                            double x2 = n2->x;
+                            double y2 = n2->y;
 
-                        double longueur = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+                            double longueur = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
 
-                        f[elements[l]->nodes[0]->num-1] -= longueur*region[elements[l]->region]->fluxTemperature/2;
-                        f[elements[l]->nodes[1]->num-1] -= longueur*region[elements[l]->region]->fluxTemperature/2;
+                            f[elements[l]->nodes[0]->num-1] -= longueur*region[elements[l]->region]->fluxTemperature/2;
+                            f[elements[l]->nodes[1]->num-1] -= longueur*region[elements[l]->region]->fluxTemperature/2;
+                        }
+
+                        if(region[elements[l]->region]->temperature != -1)
+                        {
+                            theta_k[elements[l]->nodes[0]->num-1] = region[elements[l]->region]->temperature;
+                            theta_k[elements[l]->nodes[1]->num-1] = region[elements[l]->region]->temperature;
+                        }
                     }
-
-                    if(region[elements[l]->region]->temperature != -1)
+                    else if(thermalOrElectrical == ELECTRICFLAG)
                     {
-                        theta_k[elements[l]->nodes[0]->num-1] = region[elements[l]->region]->temperature;
-                        theta_k[elements[l]->nodes[1]->num-1] = region[elements[l]->region]->temperature;
+                        if(region[elements[l]->region]->fluxVoltage != -1)
+                        {
+                            Node *n1 = elements[l]->nodes[0];
+                            Node *n2 = elements[l]->nodes[1];
+
+                            double x1 = n1->x;
+                            double y1 = n1->y;
+                            double x2 = n2->x;
+                            double y2 = n2->y;
+
+                            double longueur = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+
+                            f[elements[l]->nodes[0]->num-1] -= longueur*region[elements[l]->region]->fluxVoltage/2;
+                            f[elements[l]->nodes[1]->num-1] -= longueur*region[elements[l]->region]->fluxVoltage/2;
+                        }
+
+                        if(region[elements[l]->region]->voltage != -1)
+                        {
+                            theta_k[elements[l]->nodes[0]->num-1] = region[elements[l]->region]->voltage;
+                            theta_k[elements[l]->nodes[1]->num-1] = region[elements[l]->region]->voltage;
+                        }
                     }
                 }
             }
@@ -187,9 +215,19 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
                 {
                     for(unsigned int j = 0; j < elements[l]->nodes.size(); j++)
                     {
-                        if(region[elements[l]->region]->temperature != -1)
+                        if(thermalOrElectrical == THERMALFLAG)
                         {
-                            theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->temperature;
+                            if(region[elements[l]->region]->temperature != -1)
+                            {
+                                theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->temperature;
+                            }
+                        }
+                        else if(thermalOrElectrical == ELECTRICFLAG)
+                        {
+                            if(region[elements[l]->region]->voltage != -1)
+                            {
+                                theta_k[elements[l]->nodes[j]->num-1] = region[elements[l]->region]->voltage;
+                            }
                         }
                     }
                 }
@@ -209,7 +247,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     while(Criterion == false)
     {
         //Newton Raphson routine
-        NewtonRaphson(nodes, elements, physicals, theta_k, f, method, NodesCorresp, delta_theta_k, region, RHS, corner, border, conditions);
+        NewtonRaphson(nodes, elements, physicals, theta_k, f, method, NodesCorresp, delta_theta_k, region, RHS, corner, border, conditions, thermalOrElectrical);
 
         //Initialize value for normRHS0
         if(iter==1)
@@ -222,7 +260,7 @@ void fem(std::vector<Node*> &nodes, std::vector<Element*> &elements, std::vector
     }
 
     std::vector<double> qint(nodes.size());
-    Internal_flux(theta_k, region, elements, qint, q_m_x, q_m_y);//Chargement de la solution pour la solution du flux
+    Internal_flux(theta_k, region, elements, qint, q_m_x, q_m_y, thermalOrElectrical);//Chargement de la solution pour la solution du flux
 
     //Solution (écriture)
     for(unsigned int i = 0; i < nodes.size(); i++)
@@ -245,26 +283,23 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
     double cons;
     for(unsigned int i = 0; i < elements.size(); i++)
     {
-        if(constantProperty != 0)
-        {
-            cons = constantProperty;
-        }
-        else
-        {
-            if(thermalOrElectrical == THERMALFLAG)
-            {
-                cons = region[elements[i]->region]->thermalGeneration;
-            }
-            else if(thermalOrElectrical == ELECTRICFLAG)
-            {
-                cons = region[elements[i]->region]->electricalGeneration;
-            }
-        }
-
-
         if(elements[i]->type == 2)//If triangle
         {
-
+            if(constantProperty != 0)
+            {
+                cons = constantProperty;
+            }
+            else
+            {
+                if(thermalOrElectrical == THERMALFLAG)
+                {
+                    cons = region[elements[i]->region]->thermalGeneration;
+                }
+                else if(thermalOrElectrical == ELECTRICFLAG)
+                {
+                    cons = region[elements[i]->region]->electricalGeneration;
+                }
+            }
 
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];
@@ -283,6 +318,22 @@ void f_function(std::vector<double> &f, std::vector<Node*> &nodes, std::vector<E
         }
         else if(elements[i]->type == 3)//If quad
         {
+            if(constantProperty != 0)
+            {
+                cons = constantProperty;
+            }
+            else
+            {
+                if(thermalOrElectrical == THERMALFLAG)
+                {
+                    cons = region[elements[i]->region]->thermalGeneration;
+                }
+                else if(thermalOrElectrical == ELECTRICFLAG)
+                {
+                    cons = region[elements[i]->region]->electricalGeneration;
+                }
+            }
+
             Node *n1 = elements[i]->nodes[0];
             Node *n2 = elements[i]->nodes[1];
             Node *n3 = elements[i]->nodes[2];

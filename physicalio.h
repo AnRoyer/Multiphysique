@@ -1,6 +1,9 @@
 #ifndef PHYSICALIO_H_INCLUDED
 #define PHYSICALIO_H_INCLUDED
 
+#define ELECTRICALDATA 0x0001
+#define THERMALDATA 0x0002
+
 enum Type
 {
     DIRICHLET,
@@ -9,6 +12,7 @@ enum Type
     FE2withDIRICHLET,
     FE2withVONNEUMANN,
     FE2withPERIODIC,
+	COUPLING,
     DEFAULTTYPE
 };
 
@@ -67,11 +71,13 @@ struct Periodique
 	Periodique()
 	{
 		meanTemperature = -1;
+        meanVoltage = -1;
 		xGradient = -1;
 		yGradient = -1;
 		exist = false;
 	}
     double meanTemperature;
+    double meanVoltage;
     double xGradient;
     double yGradient;
     bool exist;
@@ -89,7 +95,8 @@ struct XMLparam
     std::string value;
 };
 
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type &typeUsed, double &eps, int &methodFE2);
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro,
+             Type &typeUsed, double &eps, std::vector<int> &methodFE2, int &natureFlag);
 XMLparam readParam(std::ifstream& fp);
 double readValue(std::ifstream& fp);
 

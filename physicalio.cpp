@@ -6,12 +6,14 @@
 #include <string>
 #include "stack.h"
 #include "physicalio.h"
+#include <mpi.h>
 
 using namespace std;
 
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
-void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro, Type &typeUsed, double &eps, int &methodFE2)
+void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro,
+             Type &typeUsed, double &eps, std::vector<int> &methodFE2, int &natureFlag)
 {
     ifstream fp(fileName);
     if(!fp.is_open())//On verifie que le fichier soit bien ouvert
@@ -28,7 +30,8 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
     Nature currentNature = DEFAULTNATURE;
     Dim currentDim = DEFAULTDIM;
     double epsRead = 0;
-	int methodFE2Read;
+	int methodFE2Read_thermic;
+	int methodFE2Read_electric;
 
     while(true)
     {
@@ -123,9 +126,9 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                             }
                             else
                             {
-                                //cout << "Error: unknown type" << endl;
+                                cout << "Error: unknown type" << endl;
                             }
-                        }
+						}
                         else if(param.name == "microMSH")
                         {
                             micro.fileMsh = param.value;
@@ -138,10 +141,18 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         {
                             sscanf(param.value.c_str(), "%lf", &epsRead);
                         }
-                        else if(param.name == "methodFE2")
+                        else if(param.name == "methodFE2_thermic")
                         {
-                            sscanf(param.value.c_str(), "%d", &methodFE2Read);
+                            sscanf(param.value.c_str(), "%d", &methodFE2Read_thermic);
                         }
+                        else if(param.name == "methodFE2_electric")
+                        {
+                            sscanf(param.value.c_str(), "%d", &methodFE2Read_electric);
+                        }
+                        /*else if(param.name == "nature")
+                        {
+                            sscanf(param.value.c_str(), "%p", &nature);
+                        }*/
                         else
                         {
                             cout << "Error: unknown parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;
@@ -219,10 +230,12 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                 else if(word == "thermal")
                 {
                     currentNature = THERMAL;
+                    natureFlag = (natureFlag|THERMALDATA);
                 }
                 else if(word == "electrical")
                 {
                     currentNature = ELECTRICAL;
+                    natureFlag = (natureFlag|ELECTRICALDATA);
                 }
                 else if(word == "value")
                 {
@@ -324,7 +337,18 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                             newCond->conductivity[1][0] = readValue(fp);
                             newCond->conductivity[1][1] = readValue(fp);
 
-                            p->thermalConductivity.push_back(newCond);
+                            if(currentNature == THERMAL)
+                            {
+                                p->thermalConductivity.push_back(newCond);
+                            }
+                            else if(currentNature == ELECTRICAL)
+                            {
+                                p->electricalConductivity.push_back(newCond);
+                            }
+                            else
+                            {
+                               cout << "Error: unknown current nature" << endl;
+                            }
                         }
                         else if(typeValue == 2)
                         {
@@ -347,7 +371,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                     }
                     else if(currentNature == ELECTRICAL)
                     {
-                        conditions.meanTemperature = readValue(fp);
+                        conditions.meanVoltage = readValue(fp);
                     }
                     else
                     {
@@ -388,7 +412,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
         }
     }
 
-    typeUsed = type;
+	typeUsed = type;
 
     if(epsRead == 0)
     {
@@ -399,13 +423,22 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
         eps = epsRead;
     }
 
-    if(methodFE2Read == 0)
+    if(methodFE2Read_thermic == 0)
     {
-        methodFE2 = 2;
+        methodFE2[0] = 2;
     }
     else
     {
-        methodFE2 = methodFE2Read;
+        methodFE2[0] = methodFE2Read_thermic;
+    }
+
+    if(methodFE2Read_electric == 0)
+    {
+        methodFE2[1] = 2;
+    }
+    else
+    {
+        methodFE2[1] = methodFE2Read_electric;
     }
 
     //cout << "End of the file reaches" << endl;
