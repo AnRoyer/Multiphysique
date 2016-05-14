@@ -86,7 +86,8 @@ Plane Surface(47) = {39, 46};
 
 // Définition des Physical group : 
 
-Physical Line(43) = {19, 29, 30, 20, 21, 22, 23, 24, 25, 26, 27, 28};// Contour
+Physical Line(48) = {29, 30, 20, 21, 22, 23, 24, 25, 26, 27, 28, 19}; // Contour
+Physical Line(49) = {5, 6, 13, 14, 15, 7, 8, 9, 10, 16, 17, 18, 11, 12}; // Chemin
 Physical Surface("Resist") = {32, 34, 40, 38, 36}; // Cellule résistance
 Physical Surface("Conductive") = {46}; // Cellule conductrice
 
