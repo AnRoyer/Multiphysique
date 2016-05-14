@@ -231,11 +231,11 @@ void NewtonRaphson(std::vector<Node*> &nodes, std::vector<Element*> &elements, s
 
         if(thermalOrElectrical == THERMALFLAG)
         {
-            f_function(c, nodes, elements, region, THERMALFLAG, 1);
+            f_function(c, nodes, elements, region, THERMALFLAG, 1, 0);
         }
         else if(thermalOrElectrical == ELECTRICFLAG)
         {
-            f_function(c, nodes, elements, region, ELECTRICFLAG, 1);
+            f_function(c, nodes, elements, region, ELECTRICFLAG, 1, 0);
         }
 
         for(unsigned int j=0; j<nodes.size(); j++)

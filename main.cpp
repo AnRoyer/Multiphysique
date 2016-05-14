@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 {
     if(argc < 3)
     {
-		// MPI initialization to avoid multiple displayong.
+		// MPI initialization to avoid multiple displaying.
 		MPI_Init(&argc, &argv);
 		MPI_Status status;
 		int nbproc, myrank ;
@@ -31,21 +31,24 @@ int main(int argc, char **argv)
     }
 
 //----------------------------------------------------FLAG PERMETTANT DE CHOISIR ENTRE THERMIQUE OU ELECTRIQUE
-	FemFlag thermalOrElectrical = THERMALFLAG;
+	FemFlag thermalOrElectrical = DEFAULTFLAG;
 //------------------------------------------------------------------------------------------------------------
 
-//Il serait utile d'ajouter un paramètre dans le .phy (de type Nature par exemple) afin de pouvoir choisir entre thermique ou électrique.
-//J'ai essayé mais je ne suis pas arriver à trouver comment faire pour lire un paramètre de type Nature.
     int natureFlag = 0;
+	Type type = DEFAULTTYPE;
+	int nature;
+	int nature_micro;
 
-    Type type;
+    Type type_thermic = DEFAULTTYPE;
+    Type type_electric = DEFAULTTYPE;
     vector<Parameter*> parameters;
     Periodique conditions;
     Micro micro;
     double eps = 0;
 	std::vector<int> methodFE2(2);
 
-    Type type_micro;
+    Type type_micro_thermic;
+    Type type_micro_electric;
     vector<Parameter*> parameters_micro;
     Periodique conditions_micro;
     Micro micro_micro;
@@ -53,9 +56,32 @@ int main(int argc, char **argv)
 	std::vector<int> methodFE2_micro(2); //no signification !!
 
     //lecture des PHYs
-    readPHY(argv[2], parameters, conditions, micro, type, eps, methodFE2, natureFlag);
+    readPHY(argv[2], parameters, conditions, micro, type_thermic, type_electric, nature, eps, methodFE2, natureFlag);
 
-	if(type == DIRICHLET || type == PERIODIC || type == VONNEUMANN)
+	int FlagFE2 = 0;
+
+	//cout << "nature " << nature;
+
+	if(nature == 1)//thermic
+	{
+		thermalOrElectrical = THERMALFLAG;
+		type = type_thermic;
+		if(type == FE2withDIRICHLET) FlagFE2 = 1;
+	}
+	else if(nature == 2)//electric
+	{
+		thermalOrElectrical = ELECTRICFLAG;
+		type = type_electric;
+		if(type == FE2withDIRICHLET) FlagFE2 = 1;
+	}
+	else if(nature == 3)//couppled
+	{
+		if(type_electric == FE2withDIRICHLET || type_thermic == FE2withDIRICHLET) FlagFE2 = 1;
+	}
+
+	//cout << "FlagFE2 " << FlagFE2;
+	
+	if(FlagFE2 ==0)
 	{
 		// MPI initialization to avoid multiple displayong.
 		MPI_Init(&argc, &argv);
@@ -77,92 +103,62 @@ int main(int argc, char **argv)
 		
 	}
 
-	int thermalOrElectricalFlag = 0;
 
-	if(type == DIRICHLET || type == PERIODIC || type == VONNEUMANN)
+	if(FlagFE2 ==0)
 	{
-		while(1)
+		if(thermalOrElectrical == ELECTRICFLAG)
 		{
-		    int nbrchoix = 1;
-		    std::map <int, FemFlag> choix;
 			cout << endl;
-		    cout << "What do you want:" << endl;
-
-		    if((natureFlag & THERMALDATA) !=0)
-		    {
-		        cout << nbrchoix << ") \t Thermal computation" << endl;
-		        choix[nbrchoix] = THERMALFLAG;
-		        nbrchoix++;
-		    }
-		    if((natureFlag & ELECTRICALDATA) !=0)
-		    {
-		        cout << nbrchoix << ") \t Electrical computation" << endl;
-		        choix[nbrchoix] = ELECTRICFLAG;
-		        nbrchoix++;
-		    }
-		    /*if((natureFlag & THERMALDATA) !=0 && (natureFlag & ELECTRICALDATA) !=0 )
-		    {
-		        cout << nbrchoix << ") \t A coupling computation" << endl;
-		        nbrchoix++;
-		    }*/
-
-		    cout << nbrchoix << ") \t Exit" << endl;
-		    nbrchoix ++;
-
-		    cout << "? >> ";
-		    int userChoix;
-		    cin >> userChoix;
-
-		    if(userChoix == nbrchoix-1)
-		    {
-		        return 0;
-		    }
-
-		    if(userChoix <= 0 || userChoix >= nbrchoix)
-		    {
-		        cout << "Error : Invalid selection" << endl;
-		    }
-		    else
-		    {
-		        thermalOrElectrical = choix[userChoix];
-				if (thermalOrElectrical == THERMALFLAG) thermalOrElectricalFlag = 1;
-				else if (thermalOrElectrical == ELECTRICFLAG) thermalOrElectricalFlag = 2;
-		        break;
-		    }
-		}//end while
-	}// end if
-
-	//if(thermalOrElectrical == THERMALFLAG) cout << "thermal !!!" << endl;
-	//if(thermalOrElectrical == ELECTRICFLAG) cout << "electric !!!" << endl;
-
-	if(type == DIRICHLET || type == PERIODIC || type == VONNEUMANN)
-	{
-		cout << endl;
-		cout << "\t############################################################" << endl;
-		cout << "\t############################################################" << endl;
-		cout << "\t##                                                        ##" << endl;
-		cout << "\t##                                                 11     ##" << endl;
-		cout << "\t##                                               1111     ##" << endl;
-		cout << "\t##     FFFFFFFFFFFFFFFF    EEEEEEEEEEEEEEEE     11 11     ##" << endl;
-		cout << "\t##     FF                  EE                      11     ##" << endl;
-		cout << "\t##     FF                  EE                      11     ##" << endl;
-		cout << "\t##     FF                  EE                             ##" << endl;
-		cout << "\t##     FF                  EE                             ##" << endl;
-		cout << "\t##     FFFFFFFFFFFF        EEEEEEEEEEEE                   ##" << endl;
-		cout << "\t##     FF                  EE                             ##" << endl;
-		cout << "\t##     FF                  EE                             ##" << endl;
-		cout << "\t##     FF                  EE                             ##" << endl;
-		cout << "\t##     FF                  EE                             ##" << endl;
-		cout << "\t##     FF                  EEEEEEEEEEEEEEEE               ##" << endl;
-		cout << "\t##                                                        ##" << endl;
-		cout << "\t############################################################" << endl;
-		cout << "\t############################################################" << endl << endl << endl;
+			cout << "\t############################################################" << endl;
+			cout << "\t############################################################" << endl;
+			cout << "\t##                                                        ##" << endl;
+			cout << "\t##                                                 11     ##" << endl;
+			cout << "\t##                                               1111     ##" << endl;
+			cout << "\t##     FFFFFFFFFFFFFFFF    EEEEEEEEEEEEEEEE     11 11     ##" << endl;
+			cout << "\t##     FF                  EE                      11     ##" << endl;
+			cout << "\t##     FF                  EE                      11     ##" << endl;
+			cout << "\t##     FF                  EE                             ##" << endl;
+			cout << "\t##     FF                  EE                             ##" << endl;
+			cout << "\t##     FFFFFFFFFFFF        EEEEEEEEEEEE             ,/    ##" << endl;
+			cout << "\t##     FF                  EE                     ,'/     ##" << endl;
+			cout << "\t##     FF                  EE                   ,' /      ##" << endl;
+			cout << "\t##     FF                  EE                 ,'  /_____, ##" << endl;
+			cout << "\t##     FF                  EE               .'____    ,'  ##" << endl;
+			cout << "\t##     FF                  EEEEEEEEEEEEEEEE      /  ,'    ##" << endl;
+			cout << "\t##                                              / ,'      ##" << endl;
+			cout << "\t###############################################/,' #########" << endl;
+			cout << "\t##############################################/'############" << endl << endl << endl;
+		}
+		else if(thermalOrElectrical == THERMALFLAG)
+		{
+			cout << endl;
+			cout << "\t############################################################" << endl;
+			cout << "\t############################################################" << endl;
+			cout << "\t##                                                        ##" << endl;
+			cout << "\t##                                                 11     ##" << endl;
+			cout << "\t##                                               1111     ##" << endl;
+			cout << "\t##     FFFFFFFFFFFFFFFF    EEEEEEEEEEEEEEEE     11 11     ##" << endl;
+			cout << "\t##     FF                  EE                      11     ##" << endl;
+			cout << "\t##     FF                  EE                      11     ##" << endl;
+			cout << "\t##     FF                  EE                             ##" << endl;
+			cout << "\t##     FF                  EE                     (       ##" << endl;
+			cout << "\t##     FFFFFFFFFFFF        EEEEEEEEEEEE           ))      ##" << endl;
+			cout << "\t##     FF                  EE                     {_}     ##" << endl;
+			cout << "\t##     FF                  EE                    .-;-.    ##" << endl;
+			cout << "\t##     FF                  EE                   |'-=-'|   ##" << endl;
+			cout << "\t##     FF                  EE                   |     |   ##" << endl;
+			cout << "\t##     FF                  EEEEEEEEEEEEEEEE     |     |   ##" << endl;
+			cout << "\t##                                              |     |   ##" << endl;
+			cout << "\t################################################|     |#####" << endl;
+			cout << "\t################################################'.___.'#####" << endl << endl << endl; 
+    	} 
 	}
 
-    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
+    if(FlagFE2 ==1)
     {
         int poubelle;
-        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, type_micro, eps_micro, methodFE2_micro, poubelle);
+		int nature_micro;
+        readPHY(micro.filePhy.c_str(), parameters_micro, conditions_micro, micro_micro, type_micro_thermic, type_micro_electric, nature_micro, eps_micro, methodFE2_micro, poubelle);
     }
 
     vector<Node*> nodes;
@@ -176,153 +172,196 @@ int main(int argc, char **argv)
     //lecture des MSHs
     readMSH(argv[1], nodes, elements, physicals);
 
-    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC)
+    if(FlagFE2 ==1)
     {
         readMSH(micro.fileMsh.c_str(), nodes_micro, elements_micro, physicals_micro);
     }
 
-	if(type == DIRICHLET || type == PERIODIC || type == VONNEUMANN)
+	if(FlagFE2 ==0)
 	{
     //Affichage des infos principales
 		cout << endl;
-		if(thermalOrElectrical == THERMALFLAG) cout << "SOLVING A THERMIC PROBLEM." << endl << endl;
-		if(thermalOrElectrical == ELECTRICFLAG) cout << "SOLVING AN ELECTRIC PROBLEM." << endl << endl;
+		//if(thermalOrElectrical == THERMALFLAG) cout << "SOLVING A THERMIC PROBLEM." << endl << endl;
+		//else if(thermalOrElectrical == ELECTRICFLAG) cout << "SOLVING AN ELECTRIC PROBLEM." << endl << endl;
 		//cout << "Read " << nodes.size() << " nodes and " << elements.size() << " elements." << endl << endl;
 		if(type == DIRICHLET) cout << "Calling the FE1 method with DIRICHLET conditions." << endl;
-		if(type == VONNEUMANN) cout << "Calling the FE1 method with VONNEUMANN conditions." << endl;
-		if(type == PERIODIC) cout << "Calling the FE1 method with PERIODIC conditions." << endl;
+		else if(type == VONNEUMANN) cout << "Calling the FE1 method with VONNEUMANN conditions." << endl;
+		else if(type == PERIODIC) cout << "Calling the FE1 method with PERIODIC conditions." << endl;
 		cout << endl;
 		cout << "-----------------------------" << endl;
 	}
 
 	map<Node*, vector<double> > solutionTemperature;
 	map<Node*, vector<double> > solutionFlux;
-	map<Node*, vector<double> > solutionTemperature_micro;
-	map<Node*, vector<double> > solutionFlux_micro;
 
 	map<Node*, vector<double> > solutionPotential;
 	map<Node*, vector<double> > solutionCurrent;
-	map<Node*, vector<double> > solutionPotential_micro;
-	map<Node*, vector<double> > solutionCurrent_micro;
-
-	/*if(type == DIRICHLET || type == PERIODIC || type == VONNEUMANN)
-	{
-		for(unsigned int i = 0; i < parameters.size(); i++)
-		{
-		    if(parameters[i]->dim == 1 && (type == DIRICHLET || type == VONNEUMANN || type == FE2withDIRICHLET || type == FE2withVONNEUMANN))
-		    {
-		        if(parameters[i]->temperature != -1 && parameters[i]->voltage != -1)
-		        {
-		            cout << "Parameter " << parameters[i]->name << " has temperature of " << parameters[i]->temperature << " K and an electrical potential of " << parameters[i]->voltage << " V." << endl;
-		        }
-		        else if(parameters[i]->temperature != -1 && parameters[i]->voltage == -1)
-		        {
-		            cout << "Parameter " << parameters[i]->name << " has temperature of " << parameters[i]->temperature << " K." << endl;
-		        }
-		        else if(parameters[i]->temperature == -1 && parameters[i]->voltage != -1)
-		        {
-		            cout << "Parameter " << parameters[i]->name << " has an electrical potential of " << parameters[i]->voltage << " V." << endl;
-		        }
-
-		        if(parameters[i]->fluxTemperature != -1 && parameters[i]->fluxVoltage != -1)
-		        {
-		            cout << "Parameter " << parameters[i]->name << " has heat flux of " << parameters[i]->fluxTemperature << " W/m and an electrical flux of " << parameters[i]->fluxVoltage << "." << endl;
-		        }
-		        else if(parameters[i]->fluxTemperature != -1 && parameters[i]->fluxVoltage == -1)
-		        {
-		            cout << "Parameter " << parameters[i]->name << " has heat flux of " << parameters[i]->fluxTemperature << " W/m." << endl;
-		        }
-		        else if(parameters[i]->fluxTemperature == -1 && parameters[i]->fluxVoltage != -1)
-		        {
-		            cout << "Parameter " << parameters[i]->name << " has an electrical potential of " << parameters[i]->fluxVoltage << "." << endl;
-		        }
-		    }
-		    else if(parameters[i]->dim == 2)
-		    {
-		        cout << "Parameter " << parameters[i]->name << " has:" << endl;
-
-		        cout << "\t - A thermal conductivity [W/mK] of:" << endl;
-		        for(unsigned int j = 0; j < parameters[i]->thermalConductivity.size(); j++)
-		        {
-		            cout << "\t\t" << parameters[i]->thermalConductivity[j]->name << " = " << endl;
-		            cout << "\t\t|" << parameters[i]->thermalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[0][1] << "|" << endl;
-		            cout << "\t\t|" << parameters[i]->thermalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->thermalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
-		        }
-
-		        cout << "\t - A heat production of " << parameters[i]->thermalGeneration << " W/m^2" << endl;
-
-		        cout << "\t - A electrical conductivity of :" << endl;
-		        for(unsigned int j = 0; j < parameters[i]->electricalConductivity.size(); j++)
-		        {
-		            cout << "\t\t" << parameters[i]->electricalConductivity[j]->name << " = " << endl;
-		            cout << "\t\t|" << parameters[i]->electricalConductivity[j]->conductivity[0][0] << "\t" << parameters[i]->electricalConductivity[j]->conductivity[0][1] << "|" << endl;
-		            cout << "\t\t|" << parameters[i]->electricalConductivity[j]->conductivity[1][0] << "\t" << parameters[i]->electricalConductivity[j]->conductivity[1][1] << "|" << endl << endl;
-		        }
-		        cout << "\t - A change in charge density of " << parameters[i]->electricalGeneration << " A/m^3." << endl;
-		    }
-		}
-	}
-
-    if(type == PERIODIC)
-    {
-        cout << "There is periodic conditions with:" << endl;
-        cout << "\t - A mean temperature: " << conditions.meanTemperature << endl;
-        cout << "\t - A mean x gradient: " << conditions.xGradient << endl;
-        cout << "\t - A mean y gradient: " << conditions.yGradient << endl;
-    	cout << endl << endl;
-    }*/
-
-    //Initial guess of the temperature field, reading macro.msh and macro.phy. The initial guess will correspond to solutionTemperature_macro.pos and will be run in DIRICHLET (see the macro.phy)
-
 
 	// Pour amméliorer => utilise MPI !!!!!!!!!!!!!!!!!!!!!!!!!!
-
-	if(thermalOrElectrical == THERMALFLAG)
+	if(FlagFE2 == 0 && nature !=3)
 	{
-		if(type == PERIODIC)
+		if(thermalOrElectrical == THERMALFLAG)
 		{
-		    fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions, eps, type);
+			if(type == PERIODIC)
+			{
+				fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions, eps, type, 0);
+			}
+			else if(type == DIRICHLET)
+			{
+				fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions, eps, type, 0);
+			}
+			else if(type == VONNEUMANN)
+			{
+				fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions, eps, type, 0);
+			}
 		}
-		else if(type == DIRICHLET)
+		else if(thermalOrElectrical == ELECTRICFLAG)
 		{
-		    fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions, eps, type);
-		}
-		else if(type == VONNEUMANN)
-		{
-		    fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions, eps, type);
+			if(type == PERIODIC)
+			{
+				fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, PERIODICFLAG, conditions, eps, type, 0);
+			}
+			else if(type == DIRICHLET)
+			{
+				fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, DIRICHLETFLAG, conditions, eps, type, 0);
+			}
+			else if(type == VONNEUMANN)
+			{
+				fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, VONNEUMANNFLAG, conditions, eps, type, 0);
+			}
 		}
 	}
-	else if(thermalOrElectrical == ELECTRICFLAG)
+
+	else if(FlagFE2 == 0 && nature == 3) //Coupled FE1 FE1
 	{
+		type = type_electric;
+		cout << endl;
+		cout << "\t############################################################" << endl;
+		cout << "\t############################################################" << endl;
+		cout << "\t##                                                        ##" << endl;
+		cout << "\t##                                                 11     ##" << endl;
+		cout << "\t##                                               1111     ##" << endl;
+		cout << "\t##     FFFFFFFFFFFFFFFF    EEEEEEEEEEEEEEEE     11 11     ##" << endl;
+		cout << "\t##     FF                  EE                      11     ##" << endl;
+		cout << "\t##     FF                  EE                      11     ##" << endl;
+		cout << "\t##     FF                  EE                             ##" << endl;
+		cout << "\t##     FF                  EE                             ##" << endl;
+		cout << "\t##     FFFFFFFFFFFF        EEEEEEEEEEEE             ,/    ##" << endl;
+		cout << "\t##     FF                  EE                     ,'/     ##" << endl;
+		cout << "\t##     FF                  EE                   ,' /      ##" << endl;
+		cout << "\t##     FF                  EE                 ,'  /_____, ##" << endl;
+		cout << "\t##     FF                  EE               .'____    ,'  ##" << endl;
+		cout << "\t##     FF                  EEEEEEEEEEEEEEEE      /  ,'    ##" << endl;
+		cout << "\t##                                              / ,'      ##" << endl;
+		cout << "\t###############################################/,' #########" << endl;
+		cout << "\t##############################################/'############" << endl << endl << endl;
+
 		if(type == PERIODIC)
 		{
-		    fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, PERIODICFLAG, conditions, eps, type);
+			fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, PERIODICFLAG, conditions, eps, type, 0);
 		}
 		else if(type == DIRICHLET)
 		{
-		    fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, DIRICHLETFLAG, conditions, eps, type);
+			fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, DIRICHLETFLAG, conditions, eps, type, 0);
 		}
 		else if(type == VONNEUMANN)
 		{
-		    fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, VONNEUMANNFLAG, conditions, eps, type);
+			fem(nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, ELECTRICFLAG, VONNEUMANNFLAG, conditions, eps, type, 0);
 		}
+
+		writeMSH((char*)"solutionPotential.pos", solutionPotential);
+		writeMSH((char*)"solutionCurrent.pos", solutionCurrent);
+
+		//Write in .dat file
+		FILE *fp = fopen("dataMatlabV.dat", "w");
+		std::map<Node*, std::vector<double> >::iterator itT = solutionPotential.begin();
+		for(itT = solutionPotential.begin(); itT != solutionPotential.end(); itT++)
+		fprintf(fp, "%.15f \t %.15f \t %.15f \n", itT->first->x, itT->first->y, itT->second[0]);
+
+		fclose(fp);
+
+		map<int, Parameter*> region;
+		for(unsigned int i = 0; i < physicals.size(); i++)
+		{
+			for(unsigned int j = 0; j < parameters.size(); j++)
+			{
+				if(parameters[j]->name == physicals[i]->name)
+				{
+				    if(parameters[j]->dim != physicals[i]->dim)//Verification si erreurs entre les deux fichiers
+				    {
+				        cout << "Error: file.phy and file.msh do not correspond" << endl;
+				    }
+				    else
+				    {
+				        region[physicals[i]->num] = parameters[j];
+				    }
+				}
+			}
+		}
+		Average_Joule_FE1(solutionPotential,elements,region);
+		type = type_thermic;
+
+		cout << endl;
+		cout << "\t############################################################" << endl;
+		cout << "\t############################################################" << endl;
+		cout << "\t##                                                        ##" << endl;
+		cout << "\t##                                                 11     ##" << endl;
+		cout << "\t##                                               1111     ##" << endl;
+		cout << "\t##     FFFFFFFFFFFFFFFF    EEEEEEEEEEEEEEEE     11 11     ##" << endl;
+		cout << "\t##     FF                  EE                      11     ##" << endl;
+		cout << "\t##     FF                  EE                      11     ##" << endl;
+		cout << "\t##     FF                  EE                             ##" << endl;
+		cout << "\t##     FF                  EE                     (       ##" << endl;
+		cout << "\t##     FFFFFFFFFFFF        EEEEEEEEEEEE           ))      ##" << endl;
+		cout << "\t##     FF                  EE                     {_}     ##" << endl;
+		cout << "\t##     FF                  EE                    .-;-.    ##" << endl;
+		cout << "\t##     FF                  EE                   |'-=-'|   ##" << endl;
+		cout << "\t##     FF                  EE                   |     |   ##" << endl;
+		cout << "\t##     FF                  EEEEEEEEEEEEEEEE     |     |   ##" << endl;
+		cout << "\t##                                              |     |   ##" << endl;
+		cout << "\t################################################|     |#####" << endl;
+		cout << "\t################################################'.___.'#####" << endl << endl << endl;
+
+		if(type == PERIODIC)
+		{
+			fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, PERIODICFLAG, conditions, eps, type, 1);
+		}
+		else if(type == DIRICHLET)
+		{
+			fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, DIRICHLETFLAG, conditions, eps, type, 1);
+		}
+		else if(type == VONNEUMANN)
+		{
+			fem(nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, THERMALFLAG, VONNEUMANNFLAG, conditions, eps, type, 1);
+		}
+
+		writeMSH((char*)"solutionTemperature.pos", solutionTemperature);
+		writeMSH((char*)"solutionFlux.pos", solutionFlux);
+
+		//Write in .dat file
+		fp = fopen("dataMatlabT.dat", "w");
+		itT = solutionTemperature.begin();
+		for(itT = solutionTemperature.begin(); itT != solutionTemperature.end(); itT++)
+		fprintf(fp, "%.15f \t %.15f \t %.15f \n", itT->first->x, itT->first->y, itT->second[0]);
+
+		fclose(fp);
 	}
 
     //FE2 method.
-    if(type == FE2withDIRICHLET || type == FE2withVONNEUMANN)
+    if(FlagFE2 ==1)
     {
-        FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionTemperature_micro, solutionFlux_micro,
-            conditions_micro, nodes, elements, physicals, parameters, solutionTemperature, solutionFlux, conditions, eps,
-			methodFE2, type, argc, argv, natureFlag);
-    }
-    /*else if(thermalOrElectrical == ELECTRICFLAG && (type == FE2withDIRICHLET || type == FE2withVONNEUMANN || type == FE2withPERIODIC))
-    {
-        FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionPotential_micro, solutionCurrent_micro,
-            conditions_micro, nodes, elements, physicals, parameters, solutionPotential, solutionCurrent, eps,
-			methodFE2, ELECTRICFLAG, type, argc, argv);
-    }*/
 
-	if(type == DIRICHLET || type == VONNEUMANN || type == PERIODIC)
+		map<Node*, vector<double> > solutionScalars;
+		map<Node*, vector<double> > solutionVectors;
+		map<Node*, vector<double> > solutionScalars_micro;
+		map<Node*, vector<double> > solutionVectors_micro;
+
+        FE2(nodes_micro, elements_micro, physicals_micro, parameters_micro, solutionScalars_micro, solutionVectors_micro,
+            conditions_micro, nodes, elements, physicals, parameters, solutionScalars, solutionVectors, conditions, eps,
+			methodFE2, type_thermic, type_electric, argc, argv, nature);
+    }
+
+	if(FlagFE2 ==0 && nature !=3)
 	{
 		if(thermalOrElectrical == THERMALFLAG)
 		{
@@ -362,10 +401,9 @@ int main(int argc, char **argv)
 		if(type == PERIODIC && thermalOrElectrical == ELECTRICFLAG) 
 		cout <<  "The ELECTRIC problem has been solved in ONE SCALE with PERIODIC conditions."  << endl;
 		cout << endl;
-		/*cout << "Press Enter to show the solution." << endl;
-		std::cin.ignore();
-		system("gmsh l.msh solutionTemperature.pos &");	*/
 	}
     return 0;
 }
+
+
 

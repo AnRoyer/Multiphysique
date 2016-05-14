@@ -13,7 +13,7 @@ using namespace std;
 
 //fonction lisant le fichier PHY en tranférant les infos qu'il contient dans parameters
 void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro,
-             Type &typeUsed, double &eps, std::vector<int> &methodFE2, int &natureFlag)
+             Type &typeUsed_thermic, Type &typeUsed_electric, int &nature, double &eps, std::vector<int> &methodFE2, int &natureFlag)
 {
     ifstream fp(fileName);
     if(!fp.is_open())//On verifie que le fichier soit bien ouvert
@@ -26,7 +26,8 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
     char c;
     Stack pile;
     Parameter* p;
-    Type type = DEFAULTTYPE;
+    Type type_thermic = DEFAULTTYPE;
+    Type type_electric = DEFAULTTYPE;
     Nature currentNature = DEFAULTNATURE;
     Dim currentDim = DEFAULTDIM;
     double epsRead = 0;
@@ -86,42 +87,85 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
 
                     while(param.name != "NULL")
                     {
-                        if(param.name == "type")
+                        if(param.name == "type_thermic")
                         {
                             if(param.value == "dirichlet")
                             {
                                 //cout << "Reading a dirichlet phy file ..." << endl;
-                                type = DIRICHLET;
+                                type_thermic = DIRICHLET;
                                 conditions.exist = false;
                             }
                             else if(param.value == "periodic")
                             {
                                 //cout << "Reading a periodic phy file ..." << endl;
-                                type = PERIODIC;
+                                type_thermic = PERIODIC;
                                 conditions.exist = true;
                             }
                             else if(param.value == "vonNeumann")
                             {
                                 //cout << "Reading a von Neumann phy file ..." << endl;
-                                type = VONNEUMANN;
+                                type_thermic = VONNEUMANN;
                                 conditions.exist = false;
                             }
                             else if(param.value == "fe2D")
                             {
                                 //cout << "Reading a FE2 with dirichlet phy file ..." << endl;
-                                type = FE2withDIRICHLET;
+                                type_thermic = FE2withDIRICHLET;
                                 conditions.exist = false;
                             }
                             else if(param.value == "fe2V")
                             {
                                 //cout << "Reading a FE2 with von Neumann phy file ..." << endl;
-                                type = FE2withVONNEUMANN;
+                                type_thermic = FE2withVONNEUMANN;
                                 conditions.exist = false;
                             }
                             else if(param.value == "fe2P")
                             {
                                 //cout << "Reading a FE2 with periodic phy file ..." << endl;
-                                type = FE2withPERIODIC;
+                                type_thermic = FE2withPERIODIC;
+                                conditions.exist = true;
+                            }
+                            else
+                            {
+                                cout << "Error: unknown type" << endl;
+                            }
+						}
+						else if(param.name == "type_electric")
+                        {
+                            if(param.value == "dirichlet")
+                            {
+                                //cout << "Reading a dirichlet phy file ..." << endl;
+                                type_electric = DIRICHLET;
+                                conditions.exist = false;
+                            }
+                            else if(param.value == "periodic")
+                            {
+                                //cout << "Reading a periodic phy file ..." << endl;
+                                type_electric = PERIODIC;
+                                conditions.exist = true;
+                            }
+                            else if(param.value == "vonNeumann")
+                            {
+                                //cout << "Reading a von Neumann phy file ..." << endl;
+                                type_electric = VONNEUMANN;
+                                conditions.exist = false;
+                            }
+                            else if(param.value == "fe2D")
+                            {
+                                //cout << "Reading a FE2 with dirichlet phy file ..." << endl;
+                                type_electric = FE2withDIRICHLET;
+                                conditions.exist = false;
+                            }
+                            else if(param.value == "fe2V")
+                            {
+                                //cout << "Reading a FE2 with von Neumann phy file ..." << endl;
+                                type_electric = FE2withVONNEUMANN;
+                                conditions.exist = false;
+                            }
+                            else if(param.value == "fe2P")
+                            {
+                                //cout << "Reading a FE2 with periodic phy file ..." << endl;
+                                type_electric = FE2withPERIODIC;
                                 conditions.exist = true;
                             }
                             else
@@ -149,10 +193,12 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         {
                             sscanf(param.value.c_str(), "%d", &methodFE2Read_electric);
                         }
-                        /*else if(param.name == "nature")
+                        else if(param.name == "nature")
                         {
-                            sscanf(param.value.c_str(), "%p", &nature);
-                        }*/
+                            if(param.value == "thermic") nature = 1;
+                            if(param.value == "electric") nature = 2;
+                            if(param.value == "coupled") nature = 3;
+                        }
                         else
                         {
                             cout << "Error: unknown parameter " << param.name << " for markup <" << pile.peek() << ">" << endl;
@@ -161,7 +207,7 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
                         param = readParam(fp);
                     }
 
-                    if(type == DEFAULTTYPE)
+                    if(type_electric == DEFAULTTYPE && type_thermic == DEFAULTTYPE)
                     {
                         cout << "Error: no type specified" << endl;
                         return;
@@ -412,7 +458,8 @@ void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodiq
         }
     }
 
-	typeUsed = type;
+	typeUsed_thermic = type_thermic;
+	typeUsed_electric = type_electric;
 
     if(epsRead == 0)
     {

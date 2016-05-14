@@ -13,6 +13,9 @@ struct Element
 {
     unsigned int num, type, region;
     std::vector<Node*> nodes;
+	double s_Me;
+	double q_Mex;
+	double q_Mey;
 };
 
 //Structure contenant les infos "physical" de gmsh

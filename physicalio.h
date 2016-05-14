@@ -12,7 +12,6 @@ enum Type
     FE2withDIRICHLET,
     FE2withVONNEUMANN,
     FE2withPERIODIC,
-	COUPLING,
     DEFAULTTYPE
 };
 
@@ -96,7 +95,7 @@ struct XMLparam
 };
 
 void readPHY(const char *fileName, std::vector<Parameter*> &parameters, Periodique &conditions, Micro &micro,
-             Type &typeUsed, double &eps, std::vector<int> &methodFE2, int &natureFlag);
+             Type &typeUsed_thermic, Type &typeUsed_electric, int &nature, double &eps, std::vector<int> &methodFE2, int &natureFlag);
 XMLparam readParam(std::ifstream& fp);
 double readValue(std::ifstream& fp);
 
