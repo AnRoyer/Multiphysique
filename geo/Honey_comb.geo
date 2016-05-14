@@ -81,12 +81,20 @@ Line Loop(37) = {7, 8, 26, 27};
 Plane Surface(38) = {37};
 Line Loop(39) = {15, 16, 17, 18, 13, 14};
 Plane Surface(40) = {39};
-Line Loop(45) = {6, -28, 7, 8, -25, -9, 10, -22, 11, 12, -30, 5, 6, -28, 7, 8, -25, -9};
-Plane Surface(46) = {45};
+Line Loop(46) = {30, -12, -11, 22, -10, 9, 25, -8, -7, 28, -6, -5};
+Plane Surface(47) = {39, 46};
 
 // Définition des Physical group : 
 
 Physical Line(43) = {19, 29, 30, 20, 21, 22, 23, 24, 25, 26, 27, 28};// Contour
 Physical Surface("Resist") = {32, 34, 40, 38, 36}; // Cellule résistance
 Physical Surface("Conductive") = {46}; // Cellule conductrice
-Transfinite Line {29, 30, 20, 19, 28, 27, 26, 25, 24, 25, 25, 23, 22, 21} = 21 Using Progression 1;
+
+// Définition maillage 
+
+
+Transfinite Line {19, 21, 23, 27} = 8 Using Progression 1;
+Transfinite Line {29, 20, 26, 24} = 5 Using Progression 1;
+Transfinite Line {25, 12, 30} = 3 Using Progression 1;
+Transfinite Line {28, 14, 6, 13, 18, 11, 17, 22, 16, 10, 15, 7} = 15 Using Progression 1;
+Transfinite Line {5, 12, 8, 9} = 10 Using Progression 1;
