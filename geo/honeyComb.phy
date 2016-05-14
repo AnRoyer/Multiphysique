@@ -1,18 +1,46 @@
-<phy type="periodic">
+<phy type="periodic" res="1e-8">
 	<global>
 		<thermal>
 			<mean>
 				$200$
 			</mean>
 			<xgradient>
-				$100$
+				$0$
 			</xgradient>
 			<ygradient>
-				$0$
+				$100$
 			</ygradient>
 		</thermal>
 	</global>
-	<surface name="Resist">
+	<line name="left">
+		<thermal>
+			<value type="reference">
+				$NULL$
+			</value>
+		</thermal>
+	</line>
+	<line name="right">
+		<thermal>
+			<value type="reference">
+				$NULL$
+			</value>
+		</thermal>
+	</line>
+	<line name="top">
+		<thermal>
+			<value type="flux">
+				$10$
+			</value>
+		</thermal>
+	</line>
+	<line name="bottom">
+		<thermal>
+			<value type="reference">
+				$10$
+			</value>
+		</thermal>
+	</line>
+	<surface name="ext">
 		<thermal>
 			<value type="conductivity" name="alpha">
 				$0$	$0$
@@ -27,7 +55,7 @@
 			</value>
 		</thermal>
 	</surface>
-	<surface name="Conductive">
+	<surface name="int">
 		<thermal>
 			<value type="conductivity" name="alpha">
 				$0$	$0$
