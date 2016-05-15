@@ -1,0 +1,36 @@
+// Gmsh project created on Sun May 15 09:00:11 2016
+
+// Parameters
+
+Sq = 2;
+mesh = 15;
+
+// Points 
+
+Point(1) = {0, 0, 0, 1.0};
+Point(2) = {Sq, 0, 0, 1.0};
+Point(3) = {Sq, Sq, 0, 1.0};
+Point(4) = {0, Sq, 0, 1.0};
+
+// Lines
+
+Line(1) = {3, 4};
+Line(2) = {4, 1};
+Line(3) = {1, 2};
+Line(4) = {2, 3};
+
+// Surfaces
+
+Line Loop(5) = {1, 2, 3, 4};
+Plane Surface(6) = {5};
+
+// Physical groups
+
+Physical Line("Left") = {2};
+Physical Line("Right") = {4};
+Physical Line("Top") = {1};
+Physical Line("Bottom") = {3};
+Physical Surface("Square") = {6};
+
+// Mesh
+Transfinite Line {1, 2, 3, 4} = mesh Using Progression 1;

@@ -1,0 +1,45 @@
+<phy type="dirichlet" res="1e-4">
+	<line name="Top">
+		<thermal>
+			<value type="reference">
+				$NULL$
+			</value>
+		</thermal>
+	</line>
+	<line name="Bottom">
+		<thermal>
+			<value type="reference">
+				$NULL$
+			</value>
+		</thermal>
+	</line>
+	<line name="Left">
+		<thermal>
+			<value type="reference">
+				$100$
+			</value>
+		</thermal>
+	</line>
+	<line name="Right">
+		<thermal>
+			<value type="reference">
+				$1000$
+			</value>
+		</thermal>
+	</line>
+	<surface name="Square">
+		<thermal>
+			<value type="conductivity" name="alpha">
+				$0$	$0$
+				$0$	$0$
+			</value>
+			<value type="conductivity" name="beta">
+				$75$	$0$
+				$0$	$100$
+			</value>
+			<value type="generation">
+				$0$
+			</value>
+		</thermal>
+	</surface>
+</phy>
