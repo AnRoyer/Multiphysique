@@ -561,9 +561,9 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 				if(method ==1 && ((criterionFE2 > 0.01 && i_while == 3) || (criterionFE2 > 0.001 && i_while == 10) ))//To avoid looping when not converging.
 				{
 					cout << endl;
-					cout << "Anisotropy on the microscopic domain is too important for method 1." << endl;
+					cout << "Method 1 is a very bad method :-(..." << endl;
 					i_while = 0;
-					cout << "Press enter to use method 2.";
+					cout << "Press enter to try method 2.";
 					cout << endl;
 		  			cin.ignore();
 					method = 2;//Automatically switches to method 2.
@@ -574,6 +574,20 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 						//This will tell the subprocesses they have to switch to method 2.
 		   			}
 					cout << "-----------------------------" << endl;
+					//Initial guess.
+					if(type == FE2withDIRICHLET)
+					{	
+						fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, thermalOrElectrical, DIRICHLETFLAG, conditions_macro, eps, type, JouleEffect);
+						/*for(int k=0;k<nodes_macro.size();k++)
+						{
+							cout << solutionTemperature_macro[nodes_macro[k]] << " " ;
+						}
+						cout << endl;*/
+					}
+					else if(type == FE2withVONNEUMANN)
+					{
+						fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, thermalOrElectrical, VONNEUMANNFLAG, conditions_macro, eps, type, JouleEffect);
+					}
 				}//end if
 
 				//-----------------------------------------------------------------------------------------
@@ -701,6 +715,7 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 			criterionFE2 = 1;
 			criterionFE2_0 =0;
 			criterionFE2_old = 0;
+			cout << endl;
 			cout << "ELECTRICAL COMPUTATION FINISHED, STARTING THERMAL COMPUTATION..." << endl;
 			if (type == PERIODIC || type == DIRICHLET || type == VONNEUMANN)
 			{

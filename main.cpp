@@ -57,7 +57,10 @@ int main(int argc, char **argv)
 
     //lecture des PHYs
     readPHY(argv[2], parameters, conditions, micro, type_thermic, type_electric, nature, eps, methodFE2, natureFlag);
-
+	/*for(int i=0;i<9;i++)
+	{
+		cout << parameters[i]->name << endl;
+	}	*/
 	int FlagFE2 = 0;
 
 	//cout << "nature " << nature;
@@ -299,6 +302,13 @@ int main(int argc, char **argv)
 			}
 		}
 		Average_Joule_FE1(solutionPotential,elements,region);
+		/*for(int e=0;e<elements.size();e++)
+		{
+			cout << elements[e]->s_Me;
+		}*/
+		cout<< endl;
+		cout << "ELECTRICAL COMPUTATION FINISHED, STARTING THERMAL COMPUTATION..." << endl;
+		cout<< endl<< endl;
 		type = type_thermic;
 
 		cout << endl;
