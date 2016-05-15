@@ -52,13 +52,13 @@ if (nature == 1)
 	type = type_thermic;
 	i_FE2 = 1;
 }
-else if (nature == 2) 
+else if (nature == 2)
 {
 	thermalOrElectrical = ELECTRICFLAG;
 	type = type_electric;
 	i_FE2 = 1;
 }
-else if (nature == 3) 
+else if (nature == 3)
 {
 	thermalOrElectrical = ELECTRICFLAG;
 	type = type_electric;
@@ -207,7 +207,7 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 		if(nature == 3) //if coupling.
 		{
 			if(i_FE2 == 2 && type == FE2withDIRICHLET) OkFE2 = 1;
-			else 
+			else
 			{
 				if(i_FE2 == 1 && type == FE2withDIRICHLET) OkFE2 = 1;
 				else OkFE2 = 0;
@@ -262,8 +262,8 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 				cout << "\t##     FF                  EEEEEEEEEEEEEEEE     |     |   ##" << endl;
 				cout << "\t##                                              |     |   ##" << endl;
 				cout << "\t################################################|     |#####" << endl;
-				cout << "\t################################################'.___.'#####" << endl << endl << endl; 
-			}                    
+				cout << "\t################################################'.___.'#####" << endl << endl << endl;
+			}
 
 			//Affichage des infos principales
 
@@ -282,7 +282,7 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 
 			//Initial guess.
 			if(type == FE2withDIRICHLET)
-			{	
+			{
 				fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, thermalOrElectrical, DIRICHLETFLAG, conditions_macro, eps, type, JouleEffect);
 				/*for(int k=0;k<nodes_macro.size();k++)
 				{
@@ -300,7 +300,7 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 			}
 			cout << endl;*/
 
-			/*elementFlag = -4;		
+			/*elementFlag = -4;
 			for(unsigned int i=1; i<nbproc;i++)
 			{
 				MPI_Send (&elementFlag, 1, MPI_INT, i, 31, MPI_COMM_WORLD);
@@ -502,7 +502,7 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 					criterionFE2 = 1000;
 					criterionFE2_0 = gmm::vect_norm2(error);
 				}
-			
+
 				if(i_while !=0) criterionFE2_old = criterionFE2;
 				if(i_while ==0) criterionFE2_old = 2000;
 				criterionFE2 = gmm::vect_norm2(error);
@@ -576,7 +576,7 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 					cout << "-----------------------------" << endl;
 					//Initial guess.
 					if(type == FE2withDIRICHLET)
-					{	
+					{
 						fem(nodes_macro, elements_macro, physicals_macro, parameters_macro, solutionTemperature_macro, solutionFlux_macro, thermalOrElectrical, DIRICHLETFLAG, conditions_macro, eps, type, JouleEffect);
 						/*for(int k=0;k<nodes_macro.size();k++)
 						{
@@ -643,8 +643,8 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 				cout << "\t##     FF                  EEEEEEEEEEEEEEEE     |     |   ##" << endl;
 				cout << "\t##                                              |     |   ##" << endl;
 				cout << "\t################################################|     |#####" << endl;
-				cout << "\t################################################'.___.'#####" << endl << endl << endl; 
-			} 
+				cout << "\t################################################'.___.'#####" << endl << endl << endl;
+			}
 
 			cout << endl;
 			//if(thermalOrElectrical == THERMALFLAG) cout << "SOLVING A THERMIC PROBLEM." << endl << endl;
@@ -707,7 +707,7 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 		}
 
 		if(i_FE2 == 2) //if first part of coupling scheme: writes the Joule heat generation.
-		{	
+		{
 			JouleEffect = 1;
 			thermalOrElectrical = THERMALFLAG;
 			type = type_thermic;
@@ -751,17 +751,17 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 			if(nature == 1 || nature == 2) //If not in a coupling scheme.
 			{
 				cout << "-----------------------------" << endl;
-				if(type == FE2withDIRICHLET && thermalOrElectrical == THERMALFLAG) 
+				if(type == FE2withDIRICHLET && thermalOrElectrical == THERMALFLAG)
 				cout << "The THERMIC problem has been solved in TWO SCALES with DIRICHLET conditions." << endl;
-				if(type == FE2withVONNEUMANN && thermalOrElectrical == THERMALFLAG) 
+				if(type == FE2withVONNEUMANN && thermalOrElectrical == THERMALFLAG)
 				cout <<"The THERMIC problem has been solved in TWO SCALES with VON NEUMANN conditions." << endl;
-				if(type == FE2withPERIODIC && thermalOrElectrical == THERMALFLAG) 
+				if(type == FE2withPERIODIC && thermalOrElectrical == THERMALFLAG)
 				cout <<  "The THERMIC problem has been solved in TWO SCALES with PERIODIC conditions."  << endl;
-				if(type == FE2withDIRICHLET && thermalOrElectrical == ELECTRICFLAG) 
+				if(type == FE2withDIRICHLET && thermalOrElectrical == ELECTRICFLAG)
 				cout << "The ELECTRIC problem has been solved in TWO SCALES with DIRICHLET conditions." << endl;
-				if(type == FE2withVONNEUMANN && thermalOrElectrical == ELECTRICFLAG) 
+				if(type == FE2withVONNEUMANN && thermalOrElectrical == ELECTRICFLAG)
 				cout <<"The ELECTRIC problem has been solved in TWO SCALES with VON NEUMANN conditions." << endl;
-				if(type == FE2withPERIODIC && thermalOrElectrical == ELECTRICFLAG) 
+				if(type == FE2withPERIODIC && thermalOrElectrical == ELECTRICFLAG)
 				cout <<  "The ELECTRIC problem has been solved in TWO SCALES with PERIODIC conditions."  << endl;
 
 				cout << endl;
@@ -780,7 +780,7 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 				cout <<  "The COUPLED problem has been solved in TWO SCALES."  << endl;
 				cout << endl;
 			}
-		}//end if i_FE2 == 1.		
+		}//end if i_FE2 == 1.
 
 		i_FE2 --;
 
@@ -872,9 +872,9 @@ if(myrank !=0)
 		q_int_e[1] = gmm::vect_sp(q_Me, gradPhi2);
 		q_int_e[2] = gmm::vect_sp(q_Me, gradPhi3);
 	    gmm::scale(q_int_e,det_J/2);
-		
+
 		//If coupling, computation of s_Me
-		Average_Joule(solutionTemperature_micro, elements_micro, region_micro, s_Me, vol_micro);	
+		if(nature ==3) Average_Joule(solutionTemperature_micro, elements_micro, region_micro, s_Me, vol_micro);
 
 		if(method == 1)
 		{
@@ -1085,7 +1085,7 @@ if(myrank !=0)
     }//end while subprocesses.
 }// end if myrank != 0.
 
-//cout << "myrank " << myrank <<endl;	
+//cout << "myrank " << myrank <<endl;
 MPI_Finalize();
 
 }//end function.
