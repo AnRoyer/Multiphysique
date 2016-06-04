@@ -440,7 +440,24 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 
 					}
 				}
+
+				//Part used to compute the energy balance in the macroscopic domain.
 				//cout << "q_int " << q_int << endl;
+				FILE *fp2 = fopen("q_int.dat", "w");
+				for(int l = 0; l < q_int.size(); l++)
+				fprintf(fp2, "%.15f \n", q_int[l]);
+				fclose(fp2);
+
+				fp2 = fopen("x.dat", "w");
+				for(int l = 0; l < nodes_macro.size(); l++)
+				fprintf(fp2, "%.15f \n", nodes_macro[l]->x);
+				fclose(fp2);
+
+				fp2 = fopen("y.dat", "w");
+				for(int l = 0; l < nodes_macro.size(); l++)
+				fprintf(fp2, "%.15f \n", nodes_macro[l]->y);
+				fclose(fp2);
+
 				//cout << "total_stiffness " << total_stiffness << endl;
 				error.clear();
 				for(unsigned int i=0;i<nodes_macro.size();i++)
@@ -691,6 +708,8 @@ if(myrank == 0)// process 0 will take care of all the displaying.
 			fprintf(fp, "%.15f \t %.15f \t %.15f \n", itT->first->x, itT->first->y, itT->second[0]);
 
 			fclose(fp);
+			//cout << "q_int " << q_int << endl;
+
 		}
 		else if(thermalOrElectrical == ELECTRICFLAG)
 		{
